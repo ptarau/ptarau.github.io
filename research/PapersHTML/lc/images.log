@@ -1,0 +1,221 @@
+This is TeX, Version 3.1415 (C version 6.1) (format=latex 95.1.5)  14 JAN 1996 14:31
+**&/opt/lib/texmf/ini/latex images.tex
+(images.tex
+LaTeX2e <1994/12/01>
+
+(/usr/local/lib/texmf/tex/latex2e/base/latex209.def
+File: latex209.def 1994/11/28 v0.39 Standard LaTeX file
+Entering LaTeX 2.09 compatibility mode.
+\footheight=\dimen102
+\@maxsep=\dimen103
+\@dblmaxsep=\dimen104
+(/usr/local/lib/texmf/tex/latex2e/base/tracefnt.sty
+Package: tracefnt 1994/11/18 v2.3m Standard LaTeX package (font tracing)
+\tracingfonts=\count82
+LaTeX Info: Redefining \selectfont on input line 101.
+)
+\symbold=\mathgroup4
+\symsans=\mathgroup5
+\symtypewriter=\mathgroup6
+\symitalic=\mathgroup7
+\symsmallcaps=\mathgroup8
+\symslanted=\mathgroup9
+LaTeX Font Info:    Redeclaring math alphabet \mathbf on input line 200.
+LaTeX Font Info:    Redeclaring math alphabet \mathsf on input line 201.
+LaTeX Font Info:    Redeclaring math alphabet \mathtt on input line 202.
+LaTeX Font Info:    Redeclaring math alphabet \mathit on input line 208.
+LaTeX Info: Redefining \em on input line 218.
+(/usr/local/lib/texmf/tex/latex2e/base/latexsym.sty
+Package: latexsym 1994/09/25 v2.1f Standard LaTeX package (lasy symbols)
+\symlasy=\mathgroup10
+LaTeX Font Info:    Overwriting symbol font `lasy' in version `bold'
+(Font)                  U/lasy/m/n --> U/lasy/b/n on input line 47.
+)
+LaTeX Font Info:    Redeclaring math delimiter \lgroup on input line 283.
+LaTeX Font Info:    Redeclaring math delimiter \rgroup on input line 285.
+LaTeX Font Info:    Redeclaring math delimiter \bracevert on input line 287.
+) (/usr/local/lib/texmf/tex/latex2e/base/article.cls
+Document Class: article 1994/12/09 v1.2x Standard LaTeX document class
+(/usr/local/lib/texmf/tex/latex2e/base/size10.clo
+File: size10.clo 1994/12/09 v1.2x Standard LaTeX file (size option)
+)
+\c@part=\count83
+\c@section=\count84
+\c@subsection=\count85
+\c@subsubsection=\count86
+\c@paragraph=\count87
+\c@subparagraph=\count88
+\c@figure=\count89
+\c@table=\count90
+\abovecaptionskip=\skip41
+\belowcaptionskip=\skip42
+Compatibility mode: definition of \rm ignored.
+Compatibility mode: definition of \sf ignored.
+Compatibility mode: definition of \tt ignored.
+Compatibility mode: definition of \bf ignored.
+Compatibility mode: definition of \it ignored.
+Compatibility mode: definition of \sl ignored.
+Compatibility mode: definition of \sc ignored.
+LaTeX Info: Redefining \cal on input line 455.
+LaTeX Info: Redefining \mit on input line 456.
+\bibindent=\dimen105
+)
+\c@theorem=\count91
+\c@definition=\count92
+\lthtmlwrite=\write3
+\sizebox=\box26
+(images.aux)
+LaTeX Font Info:    Checking defaults for OML/cmm/m/it on input line 61.
+LaTeX Font Info:    ... okay on input line 61.
+LaTeX Font Info:    Checking defaults for T1/cmr/m/n on input line 61.
+LaTeX Font Info:    ... okay on input line 61.
+LaTeX Font Info:    Checking defaults for OT1/cmr/m/n on input line 61.
+LaTeX Font Info:    ... okay on input line 61.
+LaTeX Font Info:    Checking defaults for OMS/cmsy/m/n on input line 61.
+LaTeX Font Info:    ... okay on input line 61.
+LaTeX Font Info:    Checking defaults for OMX/cmex/m/n on input line 61.
+LaTeX Font Info:    ... okay on input line 61.
+LaTeX Font Info:    Checking defaults for U/cmr/m/n on input line 61.
+LaTeX Font Info:    ... okay on input line 61.
+LaTeX Font Info:    External font `cmex10' loaded for size
+(Font)              <7> on input line 66.
+LaTeX Font Info:    External font `cmex10' loaded for size
+(Font)              <5> on input line 66.
+LaTeX Font Info:    Try loading font information for U+lasy on input line 66.
+(/usr/local/lib/texmf/tex/latex2e/base/Ulasy.fd
+File: Ulasy.fd 1994/09/25 v2.1fLaTeX symbol font definitions
+)
+latex2htmlSize :tex2html_wrap_inline422: 6.94444pt::0.0pt.
+[1
+
+
+]
+latex2htmlSize :tex2html_wrap_inline424: 6.94444pt::1.94444pt.
+[2
+
+]
+latex2htmlSize :tex2html_wrap_inline426: 6.94444pt::0.0pt.
+[3
+
+]
+! Missing $ inserted.
+<inserted text> 
+                $
+l.90 or (iii) a functor of the form <tex2html_
+                                              verb_mark><tex2html_verb_mark>...
+I've inserted a begin-math/end-math symbol since I think
+you left one out. Proceed, with fingers crossed.
+
+
+! LaTeX Error: Something's wrong--perhaps a missing \item.
+
+See the LaTeX manual or LaTeX Companion for explanation.
+Type  H <return>  for immediate help.
+ ...                                              
+                                                  
+l.93 \end{definition}
+                     
+Try typing  <return>  to proceed.
+If that doesn't work, type  X <return>  to quit.
+
+
+! LaTeX Error: Something's wrong--perhaps a missing \item.
+
+See the LaTeX manual or LaTeX Companion for explanation.
+Type  H <return>  for immediate help.
+ ...                                              
+                                                  
+l.93 \end{definition}
+                     
+Try typing  <return>  to proceed.
+If that doesn't work, type  X <return>  to quit.
+
+! Missing $ inserted.
+<inserted text> 
+                $
+l.93 \end{definition}
+                     
+I've inserted something that you may have forgotten.
+(See the <inserted text> above.)
+With luck, this will get me unwedged. But if you
+really didn't forget anything, try typing `2' now; then
+my insertion and my current dilemma will both disappear.
+
+
+Overfull \hbox (62.21587pt too wide) in paragraph at lines 87--95
+\OT1/cmr/m/it/10 func-tor of the form <tex2html$[]\OML/cmm/m/it/10 erb[]ark >< 
+tex\OT1/cmr/m/n/10 2\OML/cmm/m/it/10 html[]erb[]ark >; where < tex\OT1/cmr/m/n/
+10 2\OML/cmm/m/it/10 html[]erb[]ark ><
+ []
+
+
+Overfull \hbox (47.36089pt too wide) in paragraph at lines 87--95
+\OML/cmm/m/it/10 tex\OT1/cmr/m/n/10 2\OML/cmm/m/it/10 html[]erb[]ark > isthefun
+ctorsymboland < tex\OT1/cmr/m/n/10 2\OML/cmm/m/it/10 html[]erb[]ark >< tex\OT1/
+cmr/m/n/10 2\OML/cmm/m/it/10 html[]erb[]ark >
+ []
+
+
+Overfull \hbox (80.52368pt too wide) in paragraph at lines 87--95
+\OML/cmm/m/it/10 isasparseargumentlist:Asparseargumentlistisalistofelementsofth
+eform < tex\OT1/cmr/m/n/10 2\OML/cmm/m/it/10 html[]erb[]ark ><
+ []
+
+
+Overfull \hbox (65.56097pt too wide) in paragraph at lines 87--95
+\OML/cmm/m/it/10 tex\OT1/cmr/m/n/10 2\OML/cmm/m/it/10 html[]erb[]ark >; where <
+ tex\OT1/cmr/m/n/10 2\OML/cmm/m/it/10 html[]erb[]ark >< tex\OT1/cmr/m/n/10 2\OM
+L/cmm/m/it/10 html[]erb[]ark > isasparsetermand <
+ []
+
+
+Overfull \hbox (8.1658pt too wide) in paragraph at lines 87--95
+\OML/cmm/m/it/10 tex\OT1/cmr/m/n/10 2\OML/cmm/m/it/10 html[]erb[]ark >< tex\OT1
+/cmr/m/n/10 2\OML/cmm/m/it/10 html[]erb[]ark > istheindexof < tex\OT1/cmr/m/n/1
+0 2\OML/cmm/m/it/10 html[]erb[]ark ><
+ []
+
+
+Overfull \hbox (61.3309pt too wide) in paragraph at lines 87--95
+\OML/cmm/m/it/10 tex\OT1/cmr/m/n/10 2\OML/cmm/m/it/10 html[]erb[]ark > inthepar
+entterm:Thislistisorderedbyincreasingindiceswithnorepetitions:$
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 87--95
+
+ []
+
+[4
+
+]
+latex2htmlSize :tex2html_wrap_inline428: 6.94444pt::1.94444pt.
+[5
+
+]
+latex2htmlSize :tex2html_wrap_inline462: 6.94444pt::1.94444pt.
+[6
+
+]
+latex2htmlSize :tex2html_wrap_inline464: 6.94444pt::1.94444pt.
+[7
+
+]
+latex2htmlSize :tex2html_wrap_inline468: 6.94444pt::0.0pt.
+[8
+
+]
+latex2htmlSize :tex2html_wrap_inline474: 6.94444pt::0.0pt.
+[9
+
+] (images.aux) ) 
+Here is how much of TeX's memory you used:
+ 403 strings out of 10955
+ 4099 string characters out of 73510
+ 48730 words of memory out of 262141
+ 3277 multiletter control sequences out of 9500
+ 9298 words of font info for 35 fonts, out of 100000 for 255
+ 14 hyphenation exceptions out of 607
+ 19i,4n,19p,324b,128s stack positions out of 300i,40n,60p,3000b,4000s
+
+Output written on images.dvi (9 pages, 2244 bytes).

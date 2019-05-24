@@ -1,0 +1,1577 @@
+<!DOCTYPE HTML PUBLIC "-//IETF//DTD HTML 2.0//EN">
+<!--Converted with LaTeX2HTML .95.3 (Nov 17 1995) by Nikos Drakos (nikos@cbl.leeds.ac.uk), CBLU, University of Leeds -->
+<HTML>
+<HEAD>
+<TITLE>Assumption Grammars: Parsing as Hypothetical Reasoning</TITLE>
+<meta name="description" value="No Title">
+<meta name="keywords" value="html">
+<meta name="resource-type" value="document">
+<meta name="distribution" value="global">
+<LINK REL=STYLESHEET HREF="html.css">
+</HEAD>
+<BODY bgcolor=white LANG="EN">
+
+<P><center>
+<h1>Assumption Grammars: Parsing as Hypothetical Reasoning
+<A NAME="tex2html1" HREF="#385"><IMG ALIGN=BOTTOM ALT="gif" SRC="icons//foot_motif.gif" width="15" height="15"></A></h1>
+</center>
+<P>
+<BR>
+<BR>
+<P>
+<a href="http://fas.sfu.ca/1/cs/people/Faculty/Dahl/index.html"><B>Veronica Dahl</B></a><BR>
+Logic and Functional Programming Group<BR>
+School of Computing Science<BR>
+Simon Fraser University<BR>
+Burnaby, B.C. Canada V5A 1S6<BR>
+veronica@cs.sfu.ca <BR>
+<BR>
+<a href="http://clement.info.umoncton.ca/~tarau"><B>Paul Tarau</B></a><BR>
+ Universit&#233; de Moncton<BR>
+    D&#233;partement d'Informatique<BR>
+    Moncton, N.B.  Canada E1A 3E9,<BR>
+    tarau@info.umoncton.ca<BR>
+<BR>
+<P>
+<B>Abstract</B>
+<P>
+<BR>
+<P>
+A general framework of handling state information for logic programming
+languages on top of backtrackable assumptions (linear affine and
+intuitionistic implications ranging over the current continuation) is
+introduced, with emphasis on its high-level natural language
+processing abilities.  Assumption Grammars (AGs), a variant of
+Extended DCGs particularly suitable for hypothetical reasoning,
+ and which handles multiple streams without the need of a
+preprocessing technique, is specified within our framework.
+<P>
+We examine three natural language uses of Assumption Grammars: 
+free word order, anaphora and coordination.
+We also show two results
+which were surprising to us, namely: a) Assumption grammars allow a direct and 
+efficient implementation of link grammars-- a context-free like formalism 
+developed independently from logic grammars; and b) they offer the flexibility
+of switching between data-driven or goal-driven reasoning, at no overhead
+in terms of either syntax or implementation.
+<P>
+<EM>Keywords:</EM> logic grammars, hypothetical reasoning,
+state in logic programming,
+linear affine and intuitionistic implication
+<P>
+</B><H1><A NAME="SECTION00010000000000000000">Introduction</A></H1>
+ <A NAME="intro">&#160;</A>
+<P>
+A grammar is a finite way of specifying a language which may consist of an infinite number
+ of sentences. A logic grammar has rules that can be represented as Horn clauses.
+ Logic grammars can be conveniently implemented in Prolog: grammar rules are translated 
+into Prolog rules which can then be executed for either recognition of sentences of the 
+language specified, or (with some care) for generating sentences of the language specified.
+<P>
+Different types of logic grammars have evolved through the years, motivated
+in such concerns as ease of implementation, further expressive power, 
+a view towards a general treatment of some language processing problems,
+such as coordination, or towards automating some part of the grammar writing 
+process, such as the automatic construction of parse trees and internal
+representations. Generality and expressive power seem to have been the main concerns
+ underlying all these efforts.
+<P>
+It has been recognized since Colmerauer's work on Metamorphosis
+grammars [<A HREF="html.html#COL78">6</A>] that definite clauses subsume context-free grammars.  As the apparently
+simple translation scheme of grammars to Prolog became popular, DCGs
+have been assimilated by means of their preprocessor based <EM>
+implementation</EM>.  
+When restricted to definite clauses the original DCG translation
+is indeed operationally trouble free and has a simple Herbrand 
+semantics.
+On the other hand, mixing
+DCGs with full Prolog and side effects has been a prototypical
+Pandora's box, ever since. Cumbersome
+debugging in the presence of large list arguments of translated DCGs
+was another initially unobvious consequence, overcome
+in part with depth-limited term printing.  The complexity of a
+well-implemented preprocessor made almost each
+implementation slightly different from all others. The inability to
+support `multiple streams', although elegantly solved with Peter
+Van Roy's Extended DCGs [<A HREF="html.html#edcg">34</A>], required an even more complex preprocessor
+and extending the language with new declarations.  
+Worse, proliferation of programs mixing DCG translation with <EM>direct
+manipulation of grammar arguments</EM> have worked against data abstraction
+and portability.
+<P>
+In an apparently distinct line of thought,
+intuitionistic logic and, more recently linear logic 
+[<A HREF="html.html#girardlineartcs87">14</A>] have been influential on logic programming 
+and logic grammars
+[<A HREF="html.html#hodasthesis">18</A>].
+The result is not only a better understanding
+of their proof-theoretical characteristics
+but also a growing
+awareness on the practical benefits of integrating them
+in conventional Prolog systems.
+<P>
+This brings us to the initial motivation of this work:
+we wanted to design a set of
+powerful natural language processing tools 
+to deal with the complex hypothetical reasoning problems
+which arise, e.g.,
+when dealing with anaphora resolution, relatives, co-ordination 
+etc.
+The proposed grammars were also an attempt to deal with the
+problems of DCGs, while extending their functionality to support
+multiple streams, as in [<A HREF="html.html#edcg">34</A>]. Surprisingly, the outcome went
+beyond the intended application domain.  A unified approach to handle
+<EM>backtrackable state information in nondeterministic logic
+languages</EM>, based on a simplified form of linear affine and intuitionistic
+implications (assumptions) has emerged.
+<P>
+In this paper we examine the natural language uses of our
+proposed new logic grammar
+formalism -- Assumption Grammars --, which we believe to be the best compromise
+to date between expressive and linguistic power. We also show two results
+which were surprising to us, namely: a) Assumption grammars allow a direct and 
+efficient implementation of link grammars -- a context-free like formalism 
+developed independently from logic grammars; and b) they offer the flexibility
+of switching between data-driven or goal-driven reasoning, at no overhead
+in terms of either syntax or implementation.
+<P>
+Assumption grammars consist of logic programs augmented with a)  multiple implicit accumulators, 
+useful in particular to make the input and output strings invisible, and b) linear and 
+intuitionistic implications scoped over the
+current continuation (i.e., over the remaining AND branch of the resolution),
+based on a variant of <EM>linear logic</EM> [<A HREF="html.html#girardlineartcs87">14</A>] with
+good computational properties [<A HREF="html.html#Kopylov95">22</A>], <EM>affine</EM> logic.
+<P>
+The paper is organized as follows: Section <A HREF="html.html#back">2</A> surveys the background of
+logic grammars that is relevant to the present paper; 
+Sections <A HREF="html.html#repstate">3</A> and <A HREF="html.html#hypo">4</A> describe intuitionistic
+and linear implications and assumptions as a way of
+representing hypothetical state changes in logic programming;
+Section <A HREF="html.html#expr">5</A> gives an example showing the expressive power of
+assumptions,
+Section <A HREF="html.html#ags">6</A> describes
+Assumption Grammars; 
+Section <A HREF="html.html#formal">7</A> presents some simple formal language examples, in
+order to make it easier to follow the natural language examples to be shown
+later; Section <A HREF="html.html#nl">8</A> analyses the uses of AGs for three crucial problems in Computational Linguistics (namely, free word order, 
+anaphora and coordination); 
+ Section <A HREF="html.html#implem">9</A> describes implementation techniques for Assumption Grammars;
+Section <A HREF="html.html#link">10</A> briefly 
+describes the notion of Link grammars and shows how directly they can be
+expressed in terms of AGs; Section <A HREF="html.html#related">12</A> 
+discusses related work, and Section <A HREF="html.html#concluding">13</A> presents our 
+conclusions.
+<P>
+<H1><A NAME="SECTION00020000000000000000">Background on Logic Grammars</A></H1>
+ <A NAME="back">&#160;</A>
+<P>
+Logic grammars originated with A. Colmerauer's Metamorphosis Grammars [<A HREF="html.html#COL78">6</A>].
+They consist of rewriting rules where the non-terminal symbols may have 
+arguments, and therefore rule application may involve unification.  They can
+be considered a notational variant of logic programs, in which goal 
+satisfaction is viewed as acceptance of a string by a grammar, and where 
+string manipulation concerns are hidden from the user.
+<P>
+Extraposition Grammars (XGs) [<A HREF="html.html#P81">24</A>] allow the interspersing of skips
+on the left hand side, and these are routinely rewritten in their
+sequential order at the rightmost end of the rule, e.g.<A NAME="tex2html2" HREF="#53"><IMG ALIGN=BOTTOM ALT="gif" SRC="icons//foot_motif.gif" width="15" height="15"></A>:
+<P>
+<PRE>rel_marker, skip(X), trace --&gt; rel_pronoun, skip(X).
+</PRE>
+<P>
+In an XG rule, symbols on the left hand side following skips represent 
+left-extraposed elements (e.g., &quot;trace&quot; above marks the position out of
+which the &quot;noun_phrase&quot; category is being moved in the relativization process).
+<P>
+XGs allow us to
+describe left-extraposition phenomena powerfully and
+concisely, and to arrange for the desired representations to be carried on
+to the positions from which something has been extraposed. Here is for instance
+Pereira's extraposition grammar for the language  <IMG WIDTH=67 HEIGHT=27 ALIGN=MIDDLE ALT="tex2html_wrap_inline868" SRC="img3.gif"  > :
+<P>
+{<PRE>s --&gt; as, bs, cs.
+
+as --&gt; [].
+as, skip(X), xb --&gt; [a], as, skip(X).
+
+bs --&gt; [].
+bs, skip(X), xc --&gt; xb, [b], bs, skip(X).
+
+cs --&gt; [].
+cs --&gt; xc,[c],cs.
+</PRE>
+<P>
+Discontinuous Grammars [<A HREF="html.html#Dahl89">7</A>] generalize and include both
+ metamorphosis and extraposition grammars, by allowing for skips to 
+be arbitrarily rearranged (or duplicated, or deleted) by a rewrite rule.
+ They have been used in particular for implementing adaptations 
+of Chomskyan theories [<A HREF="html.html#chom82">5</A>]. Here is for instance
+a discontinuous grammar equivalent to the above extraposition grammar:
+<P>
+<PRE>s --&gt; as, bs, cs.
+
+as --&gt; [].
+as --&gt; xa, [a], as.
+
+bs --&gt; [].
+xa, skip(X), bs --&gt; skip(X),[b], bs,xb.
+
+cs --&gt; [].
+xb, skip(X), cs --&gt; skip(X), [c],cs.
+</PRE>
+<P>
+In the first grammar, symbols such as  <i>xb</i> can be considered as marks for  <i>b</i>'s
+which are being left-extraposed.  In the second grammar, such marks can be seen as
+right-extraposed.  While in this particular example our choice may just be
+a matter of personal preference, there may be naturalness 
+reasons to prefer a right-extraposing formulation:  some movement phenomena in
+natural language are more naturally viewed
+as right rather than left-extraposition, although they could perhaps be
+forced into left-extraposing formulations. Even when this forcing can 
+take place, the resulting impossibility to distinguish between left and
+right movement creates some theoretical problems (e.g. in the more strict 
+bounding of rightward, as opposed to leftward, movement- see [<A HREF="html.html#Ross67">25</A>]).
+There may also be efficiency
+reasons to prefer a right-extraposing formulation: 
+in our implementation of DGs, the DG above works faster than the XG shown.
+<P>
+The need to refer to skipped substrings explicitly (whether in the XG original
+notation ''...&quot;, or in the DG notation skip(X)) can be avoided altogether 
+when using Assumption Grammars, which handles movements through state changes defeasible upon backtracking.
+<P>
+Handling state information in Assumption Grammars is a special case of
+the general problem of cleanly and efficiently handling state information
+in declarative languages. We shall therefore examine this next, as well as
+the related problem of supporting backtrackable state changes.
+<P>
+<H1><A NAME="SECTION00030000000000000000">Representing state in logic languages</A></H1>
+ <A NAME="repstate">&#160;</A>
+<P>
+The main problem is that expressing
+change contradicts some of the basic principles
+logic (and functional) languages are built on.
+By definition, `referential transparency' is lost when
+a given symbol denotes different objects within the same scope.
+It has been recognized, however, that this has limited
+impact on  <EM>single-threaded</EM> data.
+<P>
+<H2><A NAME="SECTION00031000000000000000">Re-usability of single-threaded data types</A></H2>
+ <A NAME="data">&#160;</A>
+<P>
+Data having a unique producer and a unique
+consumer are frequent in declarative programming languages.
+Work on linear types [<A HREF="html.html#wadlerlin91">35</A>], monads [<A HREF="html.html#wadler92acm">36</A>] 
+and linear language constructs [<A HREF="html.html#baker92">3</A>]
+in functional programming has shown that single-threaded objects 
+are subject to <EM>in-place update</EM> within a reasonably clean semantic
+framework.
+<P>
+In Prolog, the <EM>implicit arguments</EM> of DCG grammars correspond
+to a chain of variables, having exactly two occurrences each,
+as in <TT>a(X1,X4) :- b(X1,X2), c(X2,X3), d(X3,X4)</TT>.
+We can see the chain of variables as successive states
+of a unique object.
+Clearly, no practical readability problems occur by collapsing such
+chains having exactly 2 occurrences of each variable. Arguably,
+reduced visual noise will compensate for keeping in mind
+that implicit state is passed from one literal to another,
+when this becomes simply: <TT>a :- b,c,d</TT>.
+<P>
+However, in the presence of <EM>backtracking</EM>, previous values
+must be kept for use by <EM>alternative</EM> branches.
+Although irrelevant to the user, for the implementor,
+this situation conflicts with possibility of <EM>reuse</EM> and makes
+single-threaded objects more complex
+in non-deterministic LP languages than in committed choice
+or functional languages. Our implementation
+described in subsection <A HREF="html.html#wam">9.1</A> solves this problem.
+<P>
+<H2><A NAME="SECTION00032000000000000000">Scope and state</A></H2>
+ <A NAME="state">&#160;</A>
+<P>
+In functional languages like Haskell
+where, in a deterministic
+framework,
+elegant unified solutions have been described
+in terms of monads and continuations,
+`imperative functional programming' is used (with relative impunity)
+for arrays, I/O processing, etc.
+For non-deterministic logic programming languages like Prolog,
+the natural <EM>scope</EM> of declarative <EM>state</EM> information
+is the current
+AND-continuation as we want to take advantage
+of re-usability on a deterministic AND-branch
+in the resulting
+tree-oriented resolution process.
+<P>
+This suggests that we need the
+ability of extending the scope of a state transition
+over the current <EM>continuation</EM>, instead of keeping it local
+to the body of a clause. 
+To achieve this our
+<EM>linear</EM> and <EM>intuitionistic</EM> assumptions 
+will be <EM>scoped</EM>
+over the <EM>current continuation</EM>.
+<P>
+<H4><A NAME="SECTION00032010000000000000">Implementing scope</A></H4>
+ <A NAME="scope">&#160;</A>
+Once a backtrackable <EM>assume</EM> primitive is
+implemented with assumptions
+ranging over the the current AND-branch,
+it is easy to make unavailable
+a given assumption to an arbitrary future segment in the
+current continuation by binding a logical variable serving
+as a <EM>guard</EM>.
+This is actually the technique used for
+BinProlog's definition of implication:
+<PRE>  (C =&gt; G) :- assume(Scope,C), G, Scope='$closed'.
+</PRE>
+It ensures, with an appropriate test at <EM>calling time</EM>, that
+assumption <TT>C</TT> is local to the proof 
+of <TT>G</TT> <A NAME="tex2html3" HREF="#386"><IMG ALIGN=BOTTOM ALT="gif" SRC="icons//foot_motif.gif" width="15" height="15"></A>.
+Note also that embedded uses require a stack i.e. <EM>asserta</EM>-style
+discipline for the <EM>assume</EM> operation.
+Programming with assumptions ranging over the
+current continuation is exactly the form of hypothetical
+reasoning described in [<A HREF="html.html#Tarau89Soft">31</A>].
+<P>
+<H1><A NAME="SECTION00040000000000000000">Hypothetical reasoning with linear and intuitionistic assumptions</A></H1>
+ <A NAME="hypo">&#160;</A>
+<P>
+This framework will cover a fairly general form of backtrackable state
+information, which increases the expressiveness of a Prolog system
+while reducing visual noise due to useless argument passing.  Our
+proposed  Assumption Grammars will be derived as an
+instance of the framework.
+<P>
+<H2><A NAME="SECTION00041000000000000000">Assumed code, intuitionistic and linear affine implication</A></H2>
+ <A NAME="impl">&#160;</A>
+<P>
+We will give a short description of the primitive operations
+and point out some of the differences with other
+linear/intuitionistic logic inspired implementations.
+<P>
+Intuitionistic <TT>assumei/1</TT> adds temporarily a clause usable
+in subsequent proofs. Such a clause can be used an indefinite
+number of times, like asserted clauses, except that it
+vanishes on backtracking.
+The assumed clause is represented on the heap.
+<P>
+Its scoped versions <TT>Clause=&gt;Goal</TT> and <TT>[File]=&gt;Goal</TT>
+make <TT>Clause</TT> or respectively the set of clauses found in <TT>File</TT>,
+available only during the proof of <TT>Goal</TT>.
+Clauses assumed with <TT>=&gt;</TT> are usable an indefinite number of 
+times in the proof, e.g.
+<TT>a(13) =&gt; (a(X),a(Y))</TT>
+will succeed.
+<P>
+Linear assumel/1 adds a clause usable <EM>at most once</EM>
+in subsequent proofs. Being usable <EM>at most once</EM> distinguishes
+<EM>affine</EM> linear logic from Girard's original framework
+where linear assumptions should be used <EM>exactly</EM> once.
+This assumption also vanishes on backtracking.
+Its scoped version <TT>Clause -: Goal</TT><A NAME="tex2html4" HREF="#387"><IMG ALIGN=BOTTOM ALT="gif" SRC="icons//foot_motif.gif" width="15" height="15"></A>
+or <TT>[File] -: Goal</TT>
+makes <TT>Clause</TT> or the set of clauses found in <TT>File</TT>
+available only during the proof of Goal. They vanish on backtracking and
+each clause is usable at most once in the proof, i.e.
+<TT>a(13) -: (a(X),a(Y))</TT> will fail. Note however, that 
+<TT>a(13) -: a(12) -: a(X)</TT>
+will succeed with <TT>X=12</TT> and <TT>X=13</TT> as alternative answers, while its
+non-affine counterpart
+<TT>a(13) -o a(12) -o a(X)</TT>
+as implemented in Lolli or Lygon, would fail.
+<P>
+We can see the <TT>assumel/1</TT> and <TT>assumei/1</TT> builtins
+as linear affine and respectively intuitionistic implication
+scoped over the current AND-continuation, i.e. having their
+assumptions available in future computations on the <EM>same</EM> resolution
+branch.
+<P>
+<H3><A NAME="SECTION00041100000000000000">On the weakening rule</A></H3>
+<P>
+Two `structural' rules, <EM>weakening</EM> and <EM>contraction</EM> are
+used implicitly in classical and intuitionistic logics.
+Weakening allows <EM>discarding</EM> clauses while contraction allows
+<EM>duplicating</EM> them.
+<P>
+In Wadler's formulation of linear logic (based on Girard's
+<EM>Logic of Unity</EM>) they look as follows:
+<P>
+<P> <IMG WIDTH=265 HEIGHT=45 ALIGN=BOTTOM ALT="tabular189" SRC="img4.gif"  > <P>
+<P>
+<P> <IMG WIDTH=229 HEIGHT=45 ALIGN=BOTTOM ALT="tabular199" SRC="img5.gif"  > <P>
+<P>
+and do not apply to linear affine (<TT>&lt;A&gt;</TT>) 
+assumptions but only
+to intuitionistic ones (<TT>[A]</TT>).
+<P>
+The restrictions on the <EM>weakening</EM> rule in linear logic
+require every (linear) assumption to be eventually used.
+Often, when assumptions range over the current
+continuation, this requirement is too strong, except for
+the well-known situation of handling <EM>relative clauses</EM>
+through the use of <EM>gaps</EM> [<A HREF="html.html#Hodas92">17</A>].
+On the other hand, <EM>affine</EM> linear logic allows weakening, i.e. proofs
+might succeed even if some assumptions are left unused.
+<P>
+We found our choice for <EM>affine</EM> linear assumptions
+practical and not unreasonably restrictive, as
+for a given linear predicate, <EM>negation as failure</EM> at the
+<EM>end</EM> of the proof can be used
+by the programmer to selectively check if
+an assumption has been actually consumed.
+It is also possible to check through the addition of
+a low-level primitive,
+that at a given point, the set of all affine linear assumptions 
+is empty  (cf. our first example in Section <A HREF="html.html#formal">7</A>). This can be made
+invisible to the user to maintain declarativeness.
+<P>
+<H3><A NAME="SECTION00041200000000000000">Implicit sharing/copying conventions</A></H3>
+<P>
+Although intuitionistic logic based
+systems like  <IMG WIDTH=8 HEIGHT=12 ALIGN=BOTTOM ALT="tex2html_wrap_inline886" SRC="img6.gif"  > Prolog and linear logic implementations
+usually support quantification with the benefit of
+additional expressiveness, we have chosen
+(in compliance with the usual Horn Clause convention) to
+avoid explicit quantifications, 
+for reasons of conceptual parsimony
+and simplicity
+of implementation on top of a generic Prolog compiler.
+<P>
+As linear assumptions are consumed on the first use,
+and their object is guaranteed to exist on the heap
+within the same AND-branch, no copying is performed
+and unifications occur on the actual clause.
+This implies that bindings are shared
+between the point of definition and the point of use.
+On the other hand, intuitionistic implications and assumptions follow
+the usual `copy-twice' semantics.
+<P>
+<H1><A NAME="SECTION00050000000000000000">Expressiveness of assumptions</A></H1>
+ <A NAME="expr">&#160;</A>
+<P>
+We will show the expressiveness of affine linear assumptions
+through an example a variant of which has been
+independently discovered by the creators of the logic language Lygon
+[<A HREF="html.html#whilps95">38</A>].
+<P>
+<H4><A NAME="SECTION00050010000000000000">Loop-avoidance in graph walking with linear implication</A></H4>
+<P>
+It is unexpectedly easy to write a linear implication based graph walking
+program. It will avoid falling in a loop simply because linear
+implication (<TT>-:</TT>) assumes facts that are usable only once (i.e.
+consumed upon their successful unification with a goal).
+<P>
+<PRE>path(X,X,[X]).
+path(X,Z,[X|Xs]):-linked(X,Y),path(Y,Z,Xs).
+
+linked(X,Y):-c(X,Ys),member(Y,Ys).
+
+start(Xs):-
+  c(1,[2,3])-:c(2,[1,4])-:c(3,[1,5])-:c(4,[1,5])-:
+  path(1,5,Xs).
+</PRE>
+By executing <TT>?-start(Xs)</TT>, we will avoid loops like 
+<TT>1-2-1 and 1-2-4-1</TT> and obtain the expected paths:
+<PRE>  Xs=[1,2,4,5]; 
+  Xs=[1,3,5]
+</PRE>
+<P>
+<P><A NAME="401">&#160;</A> <IMG WIDTH=143 HEIGHT=84 ALIGN=BOTTOM ALT="figure231" SRC="img7.gif"  > <BR>
+<STRONG> 1:</STRONG> The graph with loops<A NAME="graph">&#160;</A> described by <TT>c/2</TT><BR>
+<P>
+<P>
+Note that the adjacency list representation of
+the graph in fig. <A HREF="html.html#graph">1</A> ensures that each node
+represented as a linear assumption <TT>c/2</TT> becomes unavailable,
+once visited. This makes our example simpler than the similar
+program given in the Lygon distribution.
+ Note also that without <EM>weakening</EM> we would
+have a hamiltonian walk <A NAME="tex2html6" HREF="#402"><IMG ALIGN=BOTTOM ALT="gif" SRC="icons//foot_motif.gif" width="15" height="15"></A>.
+<P>
+<H1><A NAME="SECTION00060000000000000000">Assumption Grammars</A></H1>
+ <A NAME="ags">&#160;</A>
+<P>
+ We will describe in this section how various forms of assumptions
+can be used for grammar processing conveniently described
+as an instance of hypothetical resoning.
+<P>
+<H2><A NAME="SECTION00061000000000000000">Description of the Formalism</A></H2>
+<P>
+Assumption Grammars are logic programs augmented with a) linear 
+and intuitionistic implications scoped over the current
+continuation, and b) implicit multiple accumulators, 
+useful in particular to make the
+input and output strings invisible.
+<P>
+As a more convenient notation, we shall use the following equivalences in
+the remainder of the paper:
+<P>
+<PRE>*A:- assumei(A).
++A:- assumel(A).
+-A:- assumed(A).
+</PRE>
+<P>
+Hidden accumulators allow us to disregard the input and output string
+arguments, as in DCGs, but with no preprocessing requirement.
+They are accessible through a set of BinProlog built-ins, 
+allowing us to define a `multi-stream'
+ <IMG WIDTH=70 HEIGHT=27 ALIGN=MIDDLE ALT="tex2html_wrap_inline888" SRC="img8.gif"  >  construct,
+<P>
+<PRE>dcg_phrase(DcgStream, Axiom, Phrase)
+</PRE>
+<P>
+that
+switches to the appropriate <TT>DcgStream</TT> and uses <TT>Axiom</TT>
+to process or generate/recognize <TT>Phrase</TT>.
+We refer to  [<A HREF="html.html#TDF95a">32</A>]
+for their specification in term of linear assumptions.
+<P>
+For reasons that will become apparent later, we will also define, on top
+of these builtin assumptions, another type called timeless assumptions:
+<P>
+<PRE>% Assumption:
+
+% the assumption being made was expected by a previous consumption
+=X:- -wait(X), !.
+% if there is no previous expectation of X, assume it linearly
+=X:- +X.
+
+% Consumption:
+
+% uses an assumption, and deletes it if linear
+=-X:- -X, !.    
+% if the assumption has not yet been made, 
+% adds its expectation as an assumption
+=-X: +wait(X).
+</PRE>
+<P>
+With these definitions, assumptions can be consumed after they are made, or if the
+program requires them to be consumed at a point in which they have not yet been made,
+they will be assumed to be
+''waiting&quot; to be consumed (through ''wait(X)&quot;), until they are actually made 
+(at which point the
+consumption of the expectation of X amounts to the consumption of X itself).
+  Terminal symbols will be noted as: <TT>#word</TT>.
+<P>
+<H2><A NAME="SECTION00062000000000000000">Definition</A></H2>
+<P>
+An assumption grammar is a tuple  <IMG WIDTH=164 HEIGHT=27 ALIGN=MIDDLE ALT="tex2html_wrap_inline890" SRC="img9.gif"  > , 
+where  <IMG WIDTH=21 HEIGHT=25 ALIGN=MIDDLE ALT="tex2html_wrap_inline892" SRC="img10.gif"  >  is as usual the non-terminal vocabulary, whose elements are
+logic terms;  <IMG WIDTH=19 HEIGHT=25 ALIGN=MIDDLE ALT="tex2html_wrap_inline894" SRC="img11.gif"  >  is the terminal vocabulary, whose elements are noted 
+#t, where t is a logic term; C and A are a set of logic program 
+calls  <IMG WIDTH=270 HEIGHT=27 ALIGN=MIDDLE ALT="tex2html_wrap_inline896" SRC="img12.gif"  > , 
+where a is a logic term, and  {all_consumed}; 
+ <IMG WIDTH=51 HEIGHT=25 ALIGN=MIDDLE ALT="tex2html_wrap_inline898" SRC="img13.gif"  >   is the start symbol; and P are productions of the form:
+ <IMG WIDTH=61 HEIGHT=25 ALIGN=MIDDLE ALT="tex2html_wrap_inline900" SRC="img14.gif"  > , where  <IMG WIDTH=54 HEIGHT=25 ALIGN=MIDDLE ALT="tex2html_wrap_inline902" SRC="img15.gif"  >  and  <IMG WIDTH=184 HEIGHT=27 ALIGN=MIDDLE ALT="tex2html_wrap_inline904" SRC="img16.gif"  > .
+<P>
+A sentence in the language defined by an assumption grammar is a sequence of
+terminals and (possibly empty) elements of A, which are  obtained from the 
+start symbol by successive application of production rules, 
+where rule application amounts to
+rewriting in the case of terminals and non-terminals, as usual, whereas calls
+from A and C range over the current continuation and are such that elements
+in A are cancelled by matching elements in C, as follows:
+<P>
+<UL><LI>
+a call +a is satisfied by a matching call -a appearing in 
+its continuation, after which it is no longer available
+<P>
+<LI>
+a call *a is satisfied by a matching call -a appearing in 
+its continuation, and continues to be available
+<P>
+<LI>
+a call =a is either satisfied by a matching call -a in its continuation, or 
+satisfies a call -a in whose continuation it appears, after which it is
+no longer available
+<P>
+</UL>
+<P>
+Furthermore, a call to  consume_all is satisfied if there
+are no calls left from A and C. Also, as in all Prolog grammars,
+Prolog calls are allowed in the right-hand side of assumption grammar rules.
+<P>
+We refer to Appendix II for an executable specification of the
+implicit argument based DCGs of this definition in terms of assumptions
+and to Appendix I for showing their equivalence to translation based DCGs.
+<P>
+<H1><A NAME="SECTION00070000000000000000">Some Formal Language Examples</A></H1>
+ <A NAME="formal">&#160;</A>
+<H2><A NAME="SECTION00071000000000000000">  revisited</A></H2>
+<P>
+The following AG for the language
+ <IMG WIDTH=67 HEIGHT=27 ALIGN=MIDDLE ALT="tex2html_wrap_inline908" SRC="img18.gif"  >  is basically the same as the DG shown in Section 2, but
+does not need to refer to skips explicitly. Markers are now treated as
+linear assumptions.
+<P>
+<PRE>s:- as, bs, cs, all_consumed.
+
+as.
+as:- #a, +xa, as.
+
+bs.
+bs:- #b, -xa, +xb, bs.
+
+cs.
+cs:- #c, -xb, cs.
+</PRE>
+<P>
+The predicate all_consumed is used to disallow any leftover assumptions.
+By defining
+<PRE>-- X :- \+ -X.
+</PRE>
+a possible implementation for the present example is:
+<P>
+{<PRE>all_consumed:- -- xa, -- xb.
+</PRE>
+<P>
+From the user's point of view, program-dependent definitions of all_consumed
+ can be invisibly produced by compilation. For instance, for the example in
+the next section, the definition will be:
+<P>
+<PRE>all_consumed:- --as, --bs,--cs.
+</PRE>
+<P>
+Notice that a more declarative programming style results, in that
+we no longer need to refer to procedural notions such as left or right 
+extraposition. If a marker <TT>xa</TT> has been assumed, then it can be consumed upon
+encountering a corresponding terminal symbol <TT>#b</TT>.
+<P>
+<H2><A NAME="SECTION00072000000000000000">A more interesting example - scrambled </A></H2>
+<P>
+If we want our strings to retain the same number of a's, b's and c's, 
+but in any order, we can use linear assumptions in a data driven formulation, as follows:
+<P>
+<PRE>a:- -as, !.
+a:- +bs,+cs.
+
+b:- -bs, !.
+b:- +as, +cs.
+
+c:- -cs, !.
+c:- +as, +bs.
+</PRE>
+<P>
+To query, we state for instance:
+<P>
+<PRE>s:- +as, +bs, +cs, (b,a,c,b,a,c), all_consumed.
+</PRE>
+<P>
+with s the start symbol of the grammar. Thus, we start with only one 
+assumption for each of as, bs, cs. Encountering
+the corresponding terminal symbol (respectively, a, b, c) results in deleting 
+that expectation. But if a terminal, say a, is encountered after its assumption
+has been consumed, this signals the need to expect a corresponding 
+b and c to appear, so we add the
+assumptions : +bs, +cs.
+Therefore the input sequence itself triggers the firing of the rules.
+ In other words, we
+achieve data-driven behavior. Notice that in order to achieve  this 
+data-driven flavor, terminals
+are used as pseudo-non-terminals, and we no longer note them as #t,
+but as t. String acceptance now reduces to satisfaction of the start
+state, which contains the input string as a goal.
+<P>
+Here is an even simpler AG formulation, also data driven:
+<P>
+<PRE>a:- =bs.     b:- =-bs, =cs.     c:- =-cs.
+s:- (a,b,a,b,c,c), all_consumed.
+</PRE>
+<P>
+The first assumption, <EM>bs</EM>, is used to match a's with b's, while <EM>cs</EM>
+ matches b's 
+with c's, to ensure the same number of each. 
+Notice that by allowing weakening (i.e., by not requesting that all assumptions be
+ consumed at the end) we can obtain a subset of the
+language, in which for instance the following query succeeds:
+<P>
+<PRE>s:- (a,a,b,b).
+</PRE>
+<P>
+<H1><A NAME="SECTION00080000000000000000">AGs and Some Interesting NL Problems</A></H1>
+ <A NAME="nl">&#160;</A>
+<H2><A NAME="SECTION00081000000000000000">Free word order</A></H2>
+<P>
+The formal language examples presented suggest a very concise 
+treatment of free word order,
+a problem that many languages exhibit to some extent.  The problem is that
+since inflections rather than position are used to indicate case or
+grammatical function, position is used to indicate emphasis or focus, and
+almost any possible ordering becomes acceptable.  For instance, the 
+Sanskrit phrase ''Rama pashyati Seetam&quot; (Rama sees Seetam) can also
+appear as:
+<PRE>pashyati Rama Seetam
+pashyati Seetam Rama
+Seetam Rama pashyati
+Seetam pashyati Rama
+Rama Seetam pashyati
+</PRE>
+<P>
+This kind of free order of sister constituents, where each retains its
+integrity, is easily handled within discontinuous grammars, 
+as shown in [<A HREF="html.html#Dahl89">7</A>].  More interesting is
+the case in which even the contents of constituents appear to be scrambled
+up with elements from other constituents (e.g. as in Warlpiri [<A HREF="html.html#Hale83">16</A>, <A HREF="html.html#Kashket86">21</A>].
+Even in Latin or Greek, phenomena such as discontinuous noun phrases, which 
+would appear as extreme dislocation in prose, are very common in verse (and
+not unusual even in certain prose genres, e.g. Plato's late work, such as
+the  Laws).  A contrived example for Latin would be:
+<P>
+{<PRE>Puella bona puerum parvum amat.
+(Good girl loves small boy)
+</PRE>
+<P>
+where the noun and adjective in the subject and/or object noun phrase may 
+be discontinued, e.g.:
+{<PRE>Puella Puerum amat bona parvum.
+</PRE>
+<P>
+In fact all 5! word permutations are possible, and we certainly do not want
+to write a separate rule for each possible ordering.
+<P>
+A DG formulation is shown in ([<A HREF="html.html#Dahl89">7</A>]) in which 
+the number of rules needed grows linearly depending on the 
+number of constituents which can move freely. However, this formulation
+resorts of course to explicit naming and manipulation of skipped substrings.
+In AGs we can achieve a simpler and more efficient formulation:
+<P>
+<PRE>amat:- -verb.
+
+puerum:- =-noun(acc). 	% remove expectation of accusative noun  
+parvum:- =noun(acc).    % expect accusative noun to match this adj.
+     
+bona:- =-noun(nom).     % remove expectation of nominative noun
+puella:- =noun(nom).    % expect noun in nominative
+</PRE>
+<P>
+with queries of the form:
+<P>
+<PRE>s:- +verb, (bona,puella,puerum,parvum,amat).
+</PRE>
+<P>
+<H2><A NAME="SECTION00082000000000000000">Anaphora</A></H2>
+ <A NAME="ana">&#160;</A>
+<P>
+We shall now illustrate how  assumption grammars can deal with
+intersentential dependencies through the example of anaphora, in which
+a given noun phrase in a discourse is referred to in another sentence, e.g.
+through a pronoun. We  refer to the noun phrase and the pronoun in 
+question as entities which  co-specify, since they both refer to the same
+individual of the universe.
+<P>
+ As a discourse is processed, the information gleaned from the grammar 
+and the noun phrases as they appear can be temporarily added
+as hypotheses ranging over the current continuation. Consulting it then
+reduces to calling the predicate in which this information is stored.
+<P>
+We exemplify the hypothesizing part through the following noun phrase rules:
+<P>
+<PRE>np(X,VP,VP):- proper_name(X),  +specifier(X). 
+np(X,VP,R):- det(X,NP,VP,R), noun(X-F,NP), +specifier(X-F).
+
+pronoun(X-[masc,sing]):- #he.
+pronoun(X-[fem,sing]):- #her.
+
+anaphora(X):- pronoun(X).
+
+noun(X-[fem,sing],woman(X)):- #woman.
+</PRE>
+<P>
+The linear assumption, <TT>+specifier(X)</TT>, keeps in <TT>X</TT> the noun phrase's 
+relevant information. In the case of a proper name, this is simply the constant 
+representing it plus the agreement features gender and number; in the case of 
+a quantified noun phrase, this is the variable introduced by the quantification, 
+also accompanied by these agreement features.
+<P>
+Potential co-specifiers of an anaphora can then consume the most likely 
+co-specifiers hypothesized (i.e., those agreeing in gender and number), through 
+a third rule for noun phrase:
+<P>
+<PRE>np(X,VP,VP):- anaphora(X), -specifier(X).
+</PRE>
+<P>
+Semantic agreement can be similarly enforced through the well-known 
+technique of matching syntactic representations of semantic types.
+<P>
+This methodology can of course
+be extended in order to incorporate subtler criteria. For instance,
+we can make each pronoun carry,
+at the end of the analysis, the whole list of its potential
+referents as a feature. User-defined criteria can then further refine the 
+list of candidate 
+co-specifiers, as in [<A HREF="html.html#Fall95b">12</A>].
+<P>
+It is interesting to point out
+that in order to handle abstract co-specifiers [<A HREF="html.html#Asher93">2</A>], such as 
+events or propositions, all we have to
+do is to extend the definition so that other parts of a sentence can be
+identified as possible specifiers as well. For instance, for 
+recognizing ``John kicked Sam on Monday'' as the co-specifier of ``it'' in 
+the discourse: ``John kicked Sam on Monday. It hurt.'', 
+we can simply make the linear assumption that
+sentences are potential co-specifiers for pronouns of neuter gender.
+<P>
+<H2><A NAME="SECTION00083000000000000000">Coordination</A></H2>
+<P>
+Coordination (grammatical construction with the conjunctions ''and&quot;, ''or&quot;, ''but&quot;)
+ has long been one of the most difficult natural language phenomena to handle, 
+because it can involve such a wide range of grammatical constituents 
+(or non-constituent fragments), and ellipsis (or reduction) can occur in 
+the items conjoined. In most grammatical frameworks, the grammar writer 
+desiring to handle coordination can get by reasonably well by writing 
+enough specific rules involving particular grammatical categories;
+ but it appears that a proper and general treatment must recognize 
+coordination as a &quot;metagrammatical&quot; construction, in the sense that
+ metarule, general system operations, or &quot;second-pass&quot; operations
+ such as transformations, are needed for its formulation. Early
+ attempts at such a general treatment [<A HREF="html.html#Woods73">39</A>, <A HREF="html.html#Bates78">4</A>] 
+were inefficient due to combinatorial explosion. A logic 
+grammar rendition of
+coordination in terms of logic grammars [<A HREF="html.html#DahlMcCord">8</A>] 
+solved these
+inefficiencies through the addition of a semantic interpretation
+ component that produced a logical form from the output of the 
+parser and dealt with scoping problems for coordination. In the 
+following example we show how the syntactic part of a
+ metagrammatical treatment to coordination can be dealt with through AGs.
+<P>
+<PRE>sent(and(S1,S2)):- s(S1), +and, s(S2).   
+% conjunction of two sentences- assumes that
+% there will be an &quot;and&quot; between them.
+
+s(S):- name(K), verb(K,P,S), np(P).
+
+np(P):- det(X,P1,P), noun(X,P1), 
+        =(ref_np(P)).    
+% keep it as potential referent for a missing np
+np(P):- #and, -and,     
+     % a conjunction appears where an np is 
+     % expected: consume &quot;and&quot;
+    =-(ref_np(P)).   
+% consume an assumed (or to be assumed) np 
+% in lieu of  the missing one	 	
+    	
+det(X,P,the(X,P)):- #the.
+noun(X,cupboard(X)):- #cupboard.
+
+name(tim):- #tim.
+name(anne):- #anne.
+
+verb(X,Y,built(X,Y)):- #built.
+verb(X,Y,painted(X,Y)):- #painted.
+</PRE>
+<P>
+For the sentence <I>Tim built and Anne painted the cupboard</I>, for instance,
+we obtain the semantic representation:
+<PRE>and(built(tim,the(X,cupboard(X)),painted(ann,the(X,cupboard(X)))
+</PRE>
+<P>
+which is just what we intend in this simplified example. Subtler analyses can be implemented
+as in [<A HREF="html.html#Fall95b">12</A>].
+<P>
+<H1><A NAME="SECTION00090000000000000000">Implementation of Assumption Grammars</A></H1>
+ <A NAME="implem">&#160;</A>
+<P>
+<H2><A NAME="SECTION00091000000000000000">High performance implementation of AGs</A></H2>
+ <A NAME="wam">&#160;</A>
+<P>
+For reasons of efficiency we have implemented
+BinProlog's AGs in C. They are
+accessible through a set of builtins [<A HREF="html.html#Tarau97BinProlog">30</A>].
+AGs do
+not need to represent the chain of existential
+variables (heap-represented on most WAMs)
+introduced by the usual DCG and EDCG transformations.
+Instead,
+backtrackable destructive assignment implemented with 
+<EM>value trailing</EM><A NAME="tex2html8" HREF="#302"><IMG ALIGN=BOTTOM ALT="gif" SRC="icons//foot_motif.gif" width="15" height="15"></A>
+is used. The builtin <TT>#/1</TT> working as the `connect' relation <TT>'C'/3</TT>,
+in DCGs, consumes trail-space only when a nondeterministic situation (choice-point)
+arises. This is achieved by address-comparison with the
+top of the heap, saved in the choice-point.
+By `stamping' the heap with an extra cell inserted in the reference
+chain to the value-trailed objects, further attempts
+to trail the same address 
+will see it as being <EM>above</EM> the last choice point.
+<EM>This actually results in constant heap/trail use for each chain,
+only when a choice point is created, and no heap/trail
+use otherwise.</EM>
+<P>
+This is complemented with
+a very efficient, `if-less' <EM>un-trailing</EM> operation
+based on indirect address calculation. 
+Despite the extra run-time effort,
+as <TT>#/1</TT> actually uses a
+specialized instance of <TT>setarg/3</TT>,
+the overall performance of this <EM>run-time</EM> technique
+is fairly close to the <EM>static</EM> transformation based
+approach, even for plain DCGs, while
+offering multiple-stream functionality.
+We have also given emulated and native SICStus 2.1_9 
+figures (DCG-emSP and DCG-natSP)
+to show that performance is measured w.r.t a
+fairly efficient DCG processor (DCG-emBP).
+<P>
+<P><A NAME="403">&#160;</A> <IMG WIDTH=549 HEIGHT=90 ALIGN=BOTTOM ALT="table312" SRC="img20.gif"  > <BR>
+<STRONG> 1:</STRONG> DCGs vs. AGs<A NAME="perf">&#160;</A><BR>
+<P>
+<P>
+The table <A HREF="html.html#perf">1</A> shows the comparative speed of AGs vs.
+DCGs on parsing all the well formed expressions of length N=4,5,6,
+for an arithmetic expression grammar.
+<P>
+<H2><A NAME="SECTION00092000000000000000">Portability: Assumption Grammars in Life</A></H2>
+<P>
+Porting  Assumption Grammars to a language which has
+global variables and backtrackable destructive assignment
+is easy. Here is the code for Wild-Life. Extending this to multiple dcg streams is straightforward.
+<P>
+<PRE>global(dcg_stream)?
+
+dcg_def(Xs) :- dcg_stream &lt;- s(Xs).
+dcg_val(Xs) :- dcg_stream = s(Xs).
+dcg_connect(X) :- dcg_stream = s([X|Xs]), dcg_stream &lt;- s(Xs).
+dcg_phrase(Axiom,Xs) :- dcg_def(Xs), Axiom, dcg_val([]).
+</PRE>
+<P>
+<H1><A NAME="SECTION000100000000000000000">Assumption Grammars and Link Grammars</A></H1>
+ <A NAME="link">&#160;</A>
+<P>
+It is interesting to note that AGs promote both top-down and data 
+driven thinking in the development of a grammar. We employed the latter 
+in our ''data-driven&quot; examples, i.e., those with rules in
+which a terminal symbol is the left-hand side symbol.
+<P>
+We can exploit the data driven thinking mode for AGs in order to emulate
+another interesting type of grammars: Link grammars [<A HREF="html.html#SleatorCMU91">27</A>].
+<P>
+<H2><A NAME="SECTION000101000000000000000">Link grammars - informal definition and example</A></H2>
+<P>
+A link grammar  consists of a set of terminals (`words')
+each of which has a <EM>linking requirement</EM>.
+Planarity (links that do not cross can be drawn over the terminals )
+and connectivity (all terminal of a recognized phrase can be linked)
+constraints should be satisfied for each terminal.
+<P>
+The linking requirements of each word are contained in a dictionary. 
+A sample dictionary follows as an illustration:
+<P>
+<PRE><TT> <B>words</B>  &#175;<B>formulas</B>
+<P>
+------  		   ------
+<P>
+a, the				  D+
+<P>
+ran 				 S-
+<P>
+Mary, John			 O- or S+
+<P>
+chased				 S- &amp; o+
+<P>
+snake, cat			 D- &amp; (O- or S+)
+<P>
+</TT></PRE>
+<P>
+The linking requirement for each word is expressed as a formula 
+involving the operators &amp; and or. The + or - suffix on a connector 
+name indicates the 
+direction (relative to the word being defined) in which the matching 
+connector (if any) must lie.
+<P>
+The following diagram shows how the linking requirements are satisfied in the
+sentence ``The cat chased a snake''.
+<P>
+<P><P>= 10cmcat.eps = 0pt <P><H2><A NAME="SECTION000102000000000000000">A sample translation from Link grammars to Assumption Grammars</A></H2>
+<P>
+The translation into AGs is immediate, considering the  representation
+of link grammar dictionaries shown in the previous section. 
+Below, ''+&quot; and ''-&quot; have our
+AG meaning of linear implication and consumption respectively, but with this
+interpretation they happen to do exactly the same job as the link grammar
+shown above. All we have to do is to transform the + and - suffixes into
+prefixes, and add weakening for all predicates being assumed:
+<P>
+<PRE>a:- +d.
+the:- +d.
+
+mary:- -o; +s.
+john:- -o; +s.
+
+chased:- -s, +o.
+
+snake:- -d, (-o ; +s).
+cat:- -d, (-o ; +s).
+
+all_consumed:- --s, --o, --d.
+s:- (mary,chased,a,snake),all_consumed.
+</PRE>
+<P>
+Notice that AGs are descriptively more powerful than Link grammars because
+as in all logic grammars, their symbols can include arguments, through which
+we can, for instance, dynamically construct sentence representations as a side-effect
+of parsing. Conceptually, moreover, we can view AGs as enabling a
+ rendering of link grammars in which the higher-order notion of retractable assumption
+replaces the more procedural notion of ''to the right&quot; or ''to the left&quot;
+<P>
+<H1><A NAME="SECTION000110000000000000000">Datalog grammars as an instance of Assumption Grammars
+</A></H1>
+ <A NAME="datalog">&#160;</A>
+<P>
+Another interesting result is that Assumption Grammars not only render
+the preprocessor for DCGs obsolete, but can remove the need for a
+preprocessor for  more specialized
+types of logic grammars, e.g. Datalog grammars [<A HREF="html.html#DTNGulp94">10</A>, <A HREF="html.html#BDP95"></A>, <A HREF="html.html#DahlT95a">9</A>]. A much shorter
+interpretation mechanism than the original preprocessor, done in terms
+of Assumption Grammars, follows:
+<P>
+<PRE>% CODE: defines advancement in Datalog `phrase' given as a set of 
+%       w/3 facts
+
+w(X):-dcg_val(From), w(From,To,X), dcg_def(To).
+
+% this recognizes a phrase From..To
+
+dlg_phrase(From,To):- dcg_def(From), axiom, dcg_val(To).
+
+% DATA: grammar
+
+axiom:-ng,v.  ng:-a,n.
+a:-w(the). a:-w(a).
+n:-w(cat). n:-w(dog).
+v:-w(walks). v:-w(sleeps).
+
+% Input phrase in Datalog form
+
+w(0,1,the).
+w(1,2,cat).
+w(2,3,walks).
+
+% TEST
+?-dlg_phrase(0,3). % will answer yes
+</PRE>
+<P>
+Similarly, an Assumption Grammar can be made to work directly
+on top of file/stream-position information without requiring
+a special purpose preprocessor.
+<P>
+<H1><A NAME="SECTION000120000000000000000">Related Work</A></H1>
+ <A NAME="related">&#160;</A>
+<P>
+Existing work on Linear Logic based Natural Languages
+processing 
+[<A HREF="html.html#Hodas92">17</A>, <A HREF="html.html#andreolilineariclp90">1</A>] 
+is mostly at sentence level, while ours covers text level
+constructs. This is made easy by using hypothetical assumptions
+which range over the current continuation, instead of locally scoped
+implications.
+<P>
+Compared with other Linear (Intuitionistic) Logic
+based systems like Lolli [<A HREF="html.html#hodasthesis">18</A>, <A HREF="html.html#hodmilic94">19</A>],
+our constructs are implemented on top of a generic Prolog engine.
+We have chosen to
+allow <EM>weakening</EM> but not <EM>contraction</EM> 
+for linear clauses. 
+Explicit negation as failure applied to facts left over
+in a proof allows to forbid weakening selectively.
+We have also
+chosen to avoid explicit quantifiers, to keep the language
+as simple as possible.
+The semantics of our constructs is an instance of
+the sequent calculus based
+descriptions of Horn Clause Logic
+and the more powerful <EM>uniform
+proof</EM> based systems of [<A HREF="html.html#hodasthesis">18</A>].
+We can see AGs and 
+accumulator processing in general as
+an even more specific instance of
+linear operations.
+<P>
+To avoid passing extra arguments to predicates which do not use
+them, the accumulator preprocessor of <TT>Wild-Life 1.01</TT> (based on
+EDCGs [<A HREF="html.html#edcg">34</A>])
+requires <TT>pred_info</TT> declarations saying which
+predicates make use of which accumulators.
+An advantage of Assumption Grammars, compared with 
+DCGs and EDCGs is that 
+no preprocessing potentially hiding
+the programmer's intent at source level is required.
+This becomes important for easier debugging
+and direct use of meta-programming constructs.
+<P>
+Also, previous linear logic based approaches
+to long distance dependencies force us to  
+explicitly code the input and output string in every rule.  
+By using Assumption Grammars we can restore high level expressiveness.
+<P>
+ There are other analyses of free-word-order, besides that proposed here,
+that are also implementable using AGs
+e.g., using the Chomskyan notion of move-alpha. 
+Move-alpha analysis of free-word-order are typical in
+Japanese [<A HREF="html.html#Saito85">26</A>, <A HREF="html.html#Hoji85">20</A>, <A HREF="html.html#Whitman82">37</A>]. In recent work, Tanaka uses free word grammars to `parse' electronic
+circuits and extract known components (transistors etc.) [<A HREF="html.html#tanaka93">29</A>].
+Equivalent assumption grammars can be used for this
+type of application as well.
+<P>
+There is some commonality between our approach to co-specifier resolution and 
+the pronoun anaphora approach in the public domain LIFE natural 
+language analyzer, but whereas the Life program is based on antecedence, 
+we use the more general notion of cospecification [<A HREF="html.html#Sidner81">28</A>]. Also, 
+while the resolution process in the LIFE program  is fixed within the grammar 
+rules (pronoun resolution simply searches the temporally ordered list of 
+potential co-specifiers for the first match on gender, number and semantic type),
+in our approach, although some matching constraints may be 
+specified in the grammar rules, most are specified lexically.
+This allows a range of matching constraints and also 
+permits matching on abstract entities.
+<P>
+It is interesting to note that Assumption Grammars provide us with yet another tool
+  for resolving co-specification: the use of
+multiple accumulators. This approach was investigated in [<A HREF="html.html#Fall95b">12</A>].
+<P>
+A recent logic grammar treatment of coordination [<A HREF="html.html#DahlT95a">9</A>] incorporates work on 
+ellipsis which resorts to the idea of parallel structures 
+[<A HREF="html.html#Asher93">2</A>, <A HREF="html.html#Grove94">15</A>, <A HREF="html.html#DSP91">23</A>], but 
+unlike these approaches that stress semantic parallelism, it uses both 
+<EM>syntactic and semantic</EM> parallelism, which can help to automatically determine what
+ the 
+parallel structures are, while the previous approaches can not. It would be interesting
+to transpose this whole approach to AGs.
+<P>
+<H1><A NAME="SECTION000130000000000000000">Conclusion</A></H1>
+ <A NAME="concluding">&#160;</A>
+<P>
+Assumption Grammars, although theoretically no more powerful than previous
+logic grammars, have
+more expressive power in that they permit the specification of rewriting transformations
+ involving components of a string separated by arbitrary strings with the sole resource
+ of intuitionistic and (affine) linear assumption scoped over the current AND 
+continuation. 
+ Implementation is immediate through BinProlog's
+ intuitionistic and linear assumptions.
+<P>
+It was surprising to us to discover how directly link grammars could be expressed in AG 
+terms. As well, this discovery motivated us to investigate
+the data driven mode of AG description, which in itself is another interesting
+development.
+<P>
+We have presented in a unique framework a set of fairly portable tools
+for hypothetical reasoning in logic programming languages and used them
+to specify some previously known techniques, such as Extended DCGs,
+which have been described in the past only by their implementation.
+<P>
+AGs are useful for writing various programming language processors
+(compilers, program transformation systems, partial evaluators etc.).
+They can contribute to the writing of compact and efficient code with
+very little programming effort.
+<P>
+Compared to previous frameworks based on Linear (Intuitionistic) Logic,
+ours is portable and runs on top of generic Prolog systems.  This is a
+practical advantage over systems like Lolli or  <IMG WIDTH=8 HEIGHT=12 ALIGN=BOTTOM ALT="tex2html_wrap_inline912" SRC="img21.gif"  > Prolog.
+Backtrackable destructive assignment, when encapsulated in higher-level
+constructs simplifies the use of DCGs while offering more powerful
+facilities in the form of hypothetical assumptions and multiple
+accumulators.  This also reduces the need for explicitly
+imperative constructs like <EM>assert</EM> and <EM>retract</EM> in logic
+programming languages.
+<P>
+On the implementation side,
+further research is needed
+on inferring more, statically, 
+about particular instances of 
+linear and intuitionistic assumptions,
+which would allow very small overhead over
+classical statically compiled code.
+The combination of AGs and linear/intuitionistic
+assumptions is a practical basis for
+building semantically clean
+object oriented extensions on top of Prolog.
+<P>
+ An obvious
+future application is to develop a more encompassing natural language processor
+using AGs, which incorporates all of the natural language features that were
+examined in isolation here.
+<P>
+<H1><A NAME="SECTION000140000000000000000">Acknowledgements</A></H1>
+<P>
+We thank for support from NSERC (grants OGP0107411 and 611024), and from the
+ FESR
+of the Universit&#233; de Moncton. We also thank Andrew Fall for work reported in
+[<A HREF="html.html#Fall95Context">13</A>], summarized here in section <A HREF="html.html#ana">8.2</A>.
+<P>
+<P><A NAME="SECTIONREF"><H2>References</H2></A><P>
+<DL COMPACT>
+<DT><A NAME="andreolilineariclp90"><STRONG>1</STRONG></A><DD>
+J.-M. Andreoli and R. Pareschi.
+Linear objects: Logical processes with built-in inheritance.
+In D.H.D. Warren and P. Szeredi, editors, <EM>7th Int. Conf. Logic
+  Programming</EM>, Jerusalem, Israel, 1990. MIT Press.
+<P>
+<DT><A NAME="Asher93"><STRONG>2</STRONG></A><DD>
+N. Asher.
+<EM>Reference to Abstract Objects in Discourse</EM>, volume 50 of <EM>
+  Studies in Linguistics and Philosophy</EM>.
+Kluwer, 1993.
+<P>
+<DT><A NAME="baker92"><STRONG>3</STRONG></A><DD>
+H. Baker.
+Lively linear lisp-'look ma, no garbage!'.
+<EM>ACM Sigplan Notices</EM>, 27(8):89-98, August 1992.
+<P>
+<DT><A NAME="Bates78"><STRONG>4</STRONG></A><DD>
+M. Bates.
+The theory and practice of augmented transition network grammars.
+In <EM>Natural Language Communication with Computers, Bole, L.
+  (ed)</EM>, pages 191-259, 1978.
+<P>
+<DT><A NAME="chom82"><STRONG>5</STRONG></A><DD>
+N. Chomsky.
+Lecture notes on government and binding, the pisa lectures, 2nd
+  (revised) ed.
+<EM>Foris Publications</EM>, 1982.
+<P>
+<DT><A NAME="COL78"><STRONG>6</STRONG></A><DD>
+A. Colmerauer.
+Metamorphosis grammars.
+In <EM>Lecture Notes in Computer Science</EM>, New York, N. Y., 1978.
+  Springer-Verlag.
+<P>
+<DT><A NAME="Dahl89"><STRONG>7</STRONG></A><DD>
+V. Dahl.
+Discontinuous grammars.
+<EM>Computational Intelligence</EM>, 5:161-179, 1989.
+<P>
+<DT><A NAME="DahlMcCord"><STRONG>8</STRONG></A><DD>
+V. Dahl and M. McCord.
+Treating coordination in logic grammars.
+In <EM>American Journal of Computational Linguistics 9</EM>, pages
+  69-91, 1983.
+<P>
+<DT><A NAME="DahlT95a"><STRONG>9</STRONG></A><DD>
+V. Dahl, P. Tarau, and J. Andrews.
+Extending Datalog Grammars.
+In <EM>Proc. of NLDB'95, Paris</EM>, May 1995.
+<P>
+<DT><A NAME="DTNGulp94"><STRONG>10</STRONG></A><DD>
+V. Dahl, P. Tarau, and Y. N. Huang.
+Datalog Grammars.
+In <EM>Proc. 1994 Joint Conference on Declarative Programming</EM>,
+  pages 268-282, Peniscola, Spain, September 1994.
+<P>
+<DT><A NAME="DT97AGNL"><STRONG>11</STRONG></A><DD>
+Veronica Dahl, Paul Tarau, and Renwei Li.
+Assumption Grammars for Processing Natural Language.
+In Lee Naish, editor, <EM>Proceedings of the Fourteenth
+  International Conference on Logic Programming</EM>, pages 256-270, MIT press,
+  1997.
+<P>
+<DT><A NAME="Fall95b"><STRONG>12</STRONG></A><DD>
+A. Fall, V. Dahl, and P. Tarau.
+Resolving co-specification in contexts.
+In <EM>Proc. of IJCAI Workshop on Context in Natural Language
+  Processing</EM>, Montreal, Canada, 1995.
+<P>
+<DT><A NAME="Fall95Context"><STRONG>13</STRONG></A><DD>
+Andrew Fall, Veronica Dahl, and Paul Tarau.
+Resolving Co-specification in Contexts.
+In <EM>Proc. of IJCAI'95 Context in Natural Language Workshop</EM>,
+  August 1995.
+<P>
+<DT><A NAME="girardlineartcs87"><STRONG>14</STRONG></A><DD>
+J.-Y. Girard.
+Linear logic.
+<EM>Theoretical Computer Science</EM>, (50):1-102, 1987.
+<P>
+<DT><A NAME="Grove94"><STRONG>15</STRONG></A><DD>
+C. Grover, C. Brew, S. Manandhar, and M. Moens.
+Priority union and generalization in discourse grammars.
+In <EM>Proc. 32nd ACL Conference</EM>, New Mexico, 1994.
+<P>
+<DT><A NAME="Hale83"><STRONG>16</STRONG></A><DD>
+K. Hale.
+Walpiri and the grammar of non-configurational languages.
+In <EM>Natural Language and Linguistic Theory 1</EM>, pages 5-47, 1983.
+<P>
+<DT><A NAME="Hodas92"><STRONG>17</STRONG></A><DD>
+J. Hodas.
+Specifying Filler-Gap Dependency Parsers in a
+  Linear-Logic Programming Language.
+In Krzysztof Apt, editor, <EM>Logic Programming Proceedings of
+  the Joint International Conference and Symposium on Logic
+  programming</EM>, pages 622-636, Cambridge, Massachusetts London, England, 1992.
+  MIT Press.
+<P>
+<DT><A NAME="hodasthesis"><STRONG>18</STRONG></A><DD>
+Joshua S. Hodas.
+<EM>Logic Programming in Intuitionistic Linear Logic: Theory,
+  Design, and Implementation</EM>.
+PhD thesis, University of Pennsylvania, Department of Computer and
+  Information Science, May 1994.
+Available as University of Pennsylvania Technical Reports
+  MS-CIS-92-28 or LINC LAB 269.
+<P>
+<DT><A NAME="hodmilic94"><STRONG>19</STRONG></A><DD>
+Joshua S. Hodas and Dale Miller.
+Logic Programming in a Fragment of Intuitionistic Linear
+  logic.
+<EM>Journal of Information and Computation</EM>, 110(2):327-365, May
+  1994.
+<P>
+<DT><A NAME="Hoji85"><STRONG>20</STRONG></A><DD>
+H. Hoji.
+Logical form constraints and configurational structures in japanese,
+  ph.d. thesis.
+In <EM>Univ. of Washington</EM>, 1985.
+<P>
+<DT><A NAME="Kashket86"><STRONG>21</STRONG></A><DD>
+M.B. Kashket.
+Parsing of free-word order language: Walpiri.
+In <EM>Proc. of 24th Annual Meetings of the Association for
+  Computational Linguistics</EM>, 1986.
+<P>
+<DT><A NAME="Kopylov95"><STRONG>22</STRONG></A><DD>
+A. P. Kopylov.
+Decidability of linear affine logic.
+In <EM>Proceedings, Tenth Annual IEEE Symposium on Logic in Computer
+  Science</EM>, pages 496-504, San Diego, California, 26-29 June 1995. IEEE
+  Computer Society Press.
+<P>
+<DT><A NAME="DSP91"><STRONG>23</STRONG></A><DD>
+S. Shieber M. Darlymple and F. Pereira.
+Ellipsis and higher-order unification.
+<EM>Linguistics and Philosophy</EM>, 14(4):399-452, 1991.
+<P>
+<DT><A NAME="P81"><STRONG>24</STRONG></A><DD>
+F. Pereira.
+Extraposition grammars.
+<EM>American Journal for Computational Linguistics</EM>, 7:243-256,
+  1981.
+<P>
+<DT><A NAME="Ross67"><STRONG>25</STRONG></A><DD>
+J.R. Ross.
+Constraints on variables and syntax.
+<EM>Ph.D. Thesis, MIT</EM>, 1967.
+<P>
+<DT><A NAME="Saito85"><STRONG>26</STRONG></A><DD>
+M. Saito.
+Some asymetries in japanese and their theoretical implications, ph.d.
+  thesis.
+In <EM>MIT</EM>, 1985.
+<P>
+<DT><A NAME="SleatorCMU91"><STRONG>27</STRONG></A><DD>
+Daniel D. K. Seator and Davy Temperley.
+Parsing English with a Link Grammar.
+Technical report, 1991.
+CMU-CS-91-196.
+<P>
+<DT><A NAME="Sidner81"><STRONG>28</STRONG></A><DD>
+C. Sidner.
+Focussing for Interpretation of Pronouns.
+<EM>American Journal for Computational Linguistics</EM>, 7(4):217-231,
+  1981.
+<P>
+<DT><A NAME="tanaka93"><STRONG>29</STRONG></A><DD>
+Takushi Tanaka.
+Parsing electronic circuits in a logic grammar.
+<EM>IEEE-Trans, Knowledge and Data-Eng.</EM>, 5(2):229-239, 1993.
+<P>
+<DT><A NAME="Tarau97BinProlog"><STRONG>30</STRONG></A><DD>
+Paul Tarau.
+BinProlog 5.75 User Guide.
+Technical Report 97-1, D&#233;partement d'Informatique, Universit&#233;
+  de Moncton, April 1997.
+Available from <EM>http://clement.info.umoncton.ca/BinProlog</EM>.
+<P>
+<DT><A NAME="Tarau89Soft"><STRONG>31</STRONG></A><DD>
+Paul Tarau and Michel Boyer.
+Prolog Meta-Programming with Soft Databases.
+In Harvey Abramson and M.H. Rogers, editors, <EM>Meta-Programming in
+  Logic Programming</EM>, pages 365-382. MIT Press, 1989.
+<P>
+<DT><A NAME="TDF95a"><STRONG>32</STRONG></A><DD>
+Paul Tarau, Veronica Dahl, and Andrew Fall.
+Backtrackable State with Linear Assumptions, Continuations
+  and Hidden Accumulator Grammars.
+Technical Report 95-2, D&#233;partement d'Informatique, Universit&#233;
+  de Moncton, April 1995.
+Available by ftp from <EM>clement.info.umoncton.ca</EM>.
+<P>
+<DT><A NAME="TDFasian96"><STRONG>33</STRONG></A><DD>
+Paul Tarau, Veronica Dahl, and Andrew Fall.
+Backtrackable State with Linear Affine Implication and
+  Assumption Grammars.
+In Joxan Jaffar and Roland H.C. Yap, editors, <EM>Concurrency and
+  Parallelism, Programming, Networking, and Security</EM>, Lecture Notes in
+  Computer Science 1179, pages 53-64, Singapore, December 1996. Springer.
+<P>
+<DT><A NAME="edcg"><STRONG>34</STRONG></A><DD>
+Peter Van Roy.
+A useful extension to Prolog's Definite Clause Grammar notation.
+<EM>SIGPLAN notices</EM>, 24(11):132-134, November 1989.
+<P>
+<DT><A NAME="wadlerlin91"><STRONG>35</STRONG></A><DD>
+P. Wadler.
+Is there a use for linear logic?
+<EM>ACM/IFIP PEPM Symposium</EM>, June 1991.
+<P>
+<DT><A NAME="wadler92acm"><STRONG>36</STRONG></A><DD>
+Philip Wadler.
+The essence of functional programming.
+In <EM>ACM Symposium POPL'92</EM>, pages 1-15. ACM Press, 1992.
+<P>
+<DT><A NAME="Whitman82"><STRONG>37</STRONG></A><DD>
+J. Whitman.
+Configurational parameters.
+In <EM>Harvard University Manuscript, Cambridge, MA</EM>, 1982.
+<P>
+<DT><A NAME="whilps95"><STRONG>38</STRONG></A><DD>
+Michael Winikoff and James Harland.
+Implementing the linear logic programming language Lygon.
+In John Lloyd, editor, <EM>International Logic Programming
+  Symposium</EM>, pages 66-80, Portland, Oregon, December 1995. MIT Press.
+<P>
+<DT><A NAME="Woods73"><STRONG>39</STRONG></A><DD>
+W.A. Woods.
+An experimental parsing system for transition network grammars.
+In <EM>Natural Language Processing, Rustin R. (ed.)</EM>, pages
+  145-149, 1973.
+</DL>
+<P>
+<H1><A NAME="SECTION000160000000000000000">Appendix I: Accumulator vs. preprocessor based logic grammars</A></H1>
+<P>
+BinProlog's WAM-level built-in accumulator based grammar processor
+can be seen as an alternative implementation of preprocessor
+based DCGs/Extended DCGs.
+By replacing each occurrence of <TT>'#'(X)</TT>
+with <TT>[X]</TT> and each occurrence of <TT>:-</TT> by <TT>-&gt;</TT> in a
+each `AG grammar rule' its semantics will be unchanged.
+<P>
+<PRE>x:- y,#a,z.       x --&gt; y,[a],z.
+y:- #b,#c.  ==&gt;   y --&gt; [b],[c].   ==&gt; Prolog
+z:- #d,#e.        z --&gt; [d],[e].
+</PRE>
+<P>
+Alternatively, the reverse translation 
+is usable as a `DCG implementation', with
+<TT>#/1</TT> a WAM-level built-in.
+<P>
+One can be see through the following meta-interpreter (which
+can be easily customized for either DCGs or the
+implicit accumulator based component of AGs), that the
+two are basically alternative implementations of the same
+abstract algorithm.
+<P>
+<PRE>interp((A,B),S1,S3):-!,interp(A,S1,S2),interp(B,S2,S3).
+interp(T,S1,S2):-terminal(T,X),!,connect(X,S1,S2).
+interp(E,S,S):-empty(E),!.
+interp({Goal},S,S):-!,Goal.
+interp(H,S1,S2):-rule(H,B),interp(B,S1,S2).
+</PRE>
+<P>
+<H4><A NAME="SECTION000160010000000000000">DCG instantiation</A></H4>
+<P>
+<PRE>rule(H,B):- '--&gt;'(H,B).             empty([]).
+connect(X,S1,S2):- 'C'(S1,X,S2).    terminal([X],X).
+</PRE>
+<P>
+<H4><A NAME="SECTION000160020000000000000">AG instantiation</A></H4>
+<P>
+<PRE>rule(H,B):-clause(H,B).         empty(true).
+connect(X,[X|S2],S2).           terminal(#(X),X).
+</PRE>
+<P>
+<H1><A NAME="SECTION000170000000000000000">Appendix II: A specification of AGs as linear affine assumptions</A></H1>
+<P>
+<PRE>% creates and initializes a named `Extended DCG' stream
+ag_def(Name,Xs):-assumed(ag_state(Name,_)),!,assumel(ag_state(Name,Xs)).
+ag_def(Name,Xs):-assumel(ag_state(Name,Xs)).
+
+% unifies with the current state of a named `DCG' stream
+ag_val(Name,Xs):-ag_state(Name,Xs),assumel(ag_state(Name,Xs)).
+
+% equivalent of the `C'/3 step in Prolog
+ag_connect(Name,X):-ag_state(Name,[X|Xs]),assumel(ag_state(Name,Xs)).
+
+% EDCG equivalent of phrase/3 in Prolog
+ag_phrase(Name,Axiom,Xs,End):-ag_def(Name,Xs),Axiom,ag_val(Name,End).
+
+% file I/O inspired metaphors for switching between streams
+ag_tell(Name):-assumed(ag_name(_)),!,assumel(ag_name(Name)).
+ag_tell(Name):-assumel(ag_name(Name)).
+
+ag_telling(Name):-assumed(ag_name(Name)),assumel(ag_name(Name)).
+ag_telling(Name):-ag_default(Name).
+
+% projection of previous operations on default DCG stream
+ag_default(1).
+
+ag_def(Xs):-ag_telling(Name),!,ag_def(Name,Xs).
+ag_def(Xs):-ag_default(Name),ag_tell(Name),ag_def(Name,Xs).
+
+ag_val(Xs):-ag_telling(Name),ag_val(Name,Xs).
+ag_connect(X):-ag_telling(Name),ag_connect(Name,X).
+
+ag_phrase(Axiom,Xs,End):-
+   ag_telling(Name),ag_def(Xs),ag_phrase(Name,Axiom,Xs,End).
+
+% syntactic sugar for `connect' relation, in BinProlog 5.75 notation
+#W:-ag_connect(W).
+
+% example
+axiom:-ng,v.   ng:-a,n.    a:- #the.      a:- #a.
+n:- #cat.      n:- #dog.   v:- #walks.    v:- #sleeps.
+
+?-ag_phrase(axiom,Xs,[]).
+
+Xs=[the,cat,walks];
+Xs=[the,cat,sleeps];
+..............
+Xs=[a,dog,sleeps]
+</PRE>
+<P>
+<DL> <DT><A NAME="385">...Reasoning</A><DD>
+This paper is based on research first reported in
+two conference papers [<A HREF="html.html#TDFasian96">33</A>] and [<A HREF="html.html#DT97AGNL">11</A>] but none of its material has appeared in journal form.
+<P>
+<PRE>
+</PRE><DT><A NAME="53">...e.g.</A><DD>We 
+use our notation for consistency.  Pereira's notation for skip(X) is written
+&quot;...&quot; on the left hand side and simply left implicit on the right.
+<PRE>
+</PRE><DT><A NAME="386">...G</A><DD>See the actual implementation
+in file extra.pl of the BinProlog 5.75 distribution, [<A HREF="html.html#Tarau97BinProlog">30</A>].
+<PRE>
+</PRE><DT><A NAME="387">...Goal</A><DD>The use of 
+<TT>-:</TT>
+instead of the usual
+<TT>-o</TT> 
+comes from the fact that in Prolog,
+an operator mixing alphabetic and
+special characters would require quoting in infix position.
+Also, since our linear affine implication differs semantically from
+usual linear implication, it is reasonable
+to denote it differently.
+<PRE>
+</PRE><DT><A NAME="402">...walk</A><DD>Which, unfortunately, is NP-complete.
+This is another reason why we have chosen to leave to
+the programmer the task to forbid <EM>weakening</EM> only 
+when really needed.
+It is also interesting to notice, in this context, 
+that propositional (multiplicative, additive, exponential) affine  
+linear logic is decidable [<A HREF="html.html#Kopylov95">22</A>] while its
+linear logic counterpart is not.
+<P>
+<PRE>
+</PRE><DT><A NAME="302">...trailing</A><DD>
+  Value-trailing consists in pushing both the address 
+  of the variable and its value on the trail.
+<PRE>
+</PRE> </DL>
+<BR> <HR>
+<P><ADDRESS>
+<I>Paul Tarau <BR>
+Tue Sep  2 21:47:38 ADT 1997</I>
+</ADDRESS>
+</BODY>
+</HTML>

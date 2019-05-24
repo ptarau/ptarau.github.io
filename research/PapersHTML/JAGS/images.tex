@@ -1,0 +1,263 @@
+\batchmode
+% Wed Jun  4 16:29:11 PDT 1997 Veronica -sent to JLP
+
+
+ 
+
+
+\documentstyle[epsf,11pt]{article}
+\makeatletter
+\textwidth 12.7cm
+\textheight 21.5cm
+
+
+
+
+
+\newcommand {\epsffig}[1]{\par \vskip 5pt \par \hfil \epsfbox{#1}\hfill \par \vskip 5pt}
+
+\newcommand {\epsffigsz}[2]{\par \vskip 5pt \par \hfil \epsfxsize = #1\epsfbox{#2} \epsfxsize = 0pt \hfill \par \vskip 5pt}
+
+\newtheorem {theorem}{Theorem}[section]
+
+\newtheorem {lemma}[theorem]{Lemma}
+
+\newcommand {\seq}[2]{{#1} \vdash {#2}}
+
+\newcommand {\sseq}[3]{{#1};{#2} \vdash {#3}}
+
+\newcommand {\regle}[3]{
+\begin{tabular}[b]{c}
+#1\\ 
+\hline
+#2\\ 
+\end{tabular}\,\,\raisebox{1.5ex}{$#3$}
+}
+
+\newcommand {\split}[4]{
+\begin{tabular}[b]{c}
+\begin{tabular}[b]{c}
+#1
+\end{tabular}
+\begin{tabular}[b]{c}
+#2
+\end{tabular}\\ 
+\hline
+#3\\ 
+\end{tabular}\,\,\raisebox{1.5ex}{$#4$}
+}
+
+\newcommand {\Regle}[3]{
+#1
+$\overline{\mbox{#2}}^{\,#3}$\\ 
+}
+
+\newcommand {\FirstRegle}[3]{
+\begin{tabular}[b]{c}
+#1
+$\overline{\mbox{#2}}^{\, #3}$\\ 
+\end{tabular}
+}
+
+\newcommand {\FirstSplit}[4]{
+\begin{tabular}[b]{c}
+\begin{tabular}[b]{c}
+#1
+\end{tabular}
+\begin{tabular}[b]{c}
+#2
+\end{tabular}\\ 
+$\overline{\mbox{#3}}^{\, #4}$\\ 
+\end{tabular}
+}
+
+\newcommand {\Split}[4]{
+\begin{tabular}[b]{c}
+#1
+\end{tabular}
+\begin{tabular}[b]{c}
+#2
+\end{tabular}\\ 
+$\overline{\mbox{#3}}^{\, #4}$\\ 
+}
+
+\makeatother
+\newenvironment{tex2html_wrap}{}{}
+\newwrite\lthtmlwrite
+\def\lthtmltypeout#1{{\let\protect\string\immediate\write\lthtmlwrite{#1}}}%
+\newbox\sizebox
+\begin{document}
+\pagestyle{empty}
+{\newpage
+\clearpage
+\samepage \setbox\sizebox=\hbox{$a^nb^nc^n$}\lthtmltypeout{latex2htmlSize :tex2html_wrap_inline864: \the\ht\sizebox::\the\dp\sizebox.}\box\sizebox
+}
+
+{\newpage
+\clearpage
+\samepage \setbox\sizebox=\hbox{$a^nb^nc^n$}\lthtmltypeout{latex2htmlSize :tex2html_wrap_inline866: \the\ht\sizebox::\the\dp\sizebox.}\box\sizebox
+}
+
+\stepcounter{section}
+\stepcounter{section}
+{\newpage
+\clearpage
+\samepage \setbox\sizebox=\hbox{$\{a^n b^n c^n \}$}\lthtmltypeout{latex2htmlSize :tex2html_wrap_inline868: \the\ht\sizebox::\the\dp\sizebox.}\box\sizebox
+}
+
+\stepcounter{section}
+\stepcounter{subsection}
+\stepcounter{subsection}
+\stepcounter{paragraph}
+\stepcounter{section}
+\stepcounter{subsection}
+\stepcounter{subsubsection}
+{\newpage
+\clearpage
+\samepage \begin{tabular}{|c|l|}
+\hline
+\begin{tabular}[b]{c}
+${\Gamma,[A],[A]} \vdash {B}$\\  
+\hline
+${\Gamma,[A]} \vdash {B}$\\  
+\end{tabular}\,\,\raisebox{1.5ex}{$Contraction$}&\\ 
+\hline
+\end{tabular}
+}
+
+{\newpage
+\clearpage
+\samepage \begin{tabular}{|c|l|}
+\hline
+\begin{tabular}[b]{c}
+${\Gamma} \vdash {B}$\\  
+\hline
+${\Gamma,[A]} \vdash {B}$\\  
+\end{tabular}\,\,\raisebox{1.5ex}{$Weakening$}&\\ 
+\hline
+\end{tabular}
+}
+
+\stepcounter{subsubsection}
+{\newpage
+\clearpage
+\samepage \setbox\sizebox=\hbox{$\lambda$}\lthtmltypeout{latex2htmlSize :tex2html_wrap_inline886: \the\ht\sizebox::\the\dp\sizebox.}\box\sizebox
+}
+
+\stepcounter{section}
+\stepcounter{paragraph}
+{\newpage
+\clearpage
+\samepage \begin{figure}[htbp]
+\begin{center}\leavevmode
+\epsfxsize 5cm
+\epsfbox{graph.eps}
+\end{center}
+
+\end{figure}
+}
+
+\stepcounter{section}
+\stepcounter{subsection}
+{\newpage
+\clearpage
+\samepage \setbox\sizebox=\hbox{$phrase/3$}\lthtmltypeout{latex2htmlSize :tex2html_wrap_inline888: \the\ht\sizebox::\the\dp\sizebox.}\box\sizebox
+}
+
+\stepcounter{subsection}
+{\newpage
+\clearpage
+\samepage \setbox\sizebox=\hbox{$<V_N, V_T, C, A, s, P >$}\lthtmltypeout{latex2htmlSize :tex2html_wrap_inline890: \the\ht\sizebox::\the\dp\sizebox.}\box\sizebox
+}
+
+{\newpage
+\clearpage
+\samepage \setbox\sizebox=\hbox{$V_N$}\lthtmltypeout{latex2htmlSize :tex2html_wrap_inline892: \the\ht\sizebox::\the\dp\sizebox.}\box\sizebox
+}
+
+{\newpage
+\clearpage
+\samepage \setbox\sizebox=\hbox{$V_T$}\lthtmltypeout{latex2htmlSize :tex2html_wrap_inline894: \the\ht\sizebox::\the\dp\sizebox.}\box\sizebox
+}
+
+{\newpage
+\clearpage
+\samepage \setbox\sizebox=\hbox{$A= \{+a, *a, =a \}, C=\{-a, =-a\}$}\lthtmltypeout{latex2htmlSize :tex2html_wrap_inline896: \the\ht\sizebox::\the\dp\sizebox.}\box\sizebox
+}
+
+{\newpage
+\clearpage
+\samepage \setbox\sizebox=\hbox{$s \in V_N$}\lthtmltypeout{latex2htmlSize :tex2html_wrap_inline898: \the\ht\sizebox::\the\dp\sizebox.}\box\sizebox
+}
+
+{\newpage
+\clearpage
+\samepage \setbox\sizebox=\hbox{$n\ :-\ \beta$}\lthtmltypeout{latex2htmlSize :tex2html_wrap_inline900: \the\ht\sizebox::\the\dp\sizebox.}\box\sizebox
+}
+
+{\newpage
+\clearpage
+\samepage \setbox\sizebox=\hbox{$n \in V_N$}\lthtmltypeout{latex2htmlSize :tex2html_wrap_inline902: \the\ht\sizebox::\the\dp\sizebox.}\box\sizebox
+}
+
+{\newpage
+\clearpage
+\samepage \setbox\sizebox=\hbox{$\beta  \in \{V_N \cup V_T \cup
+A \cup C\}^*$}\lthtmltypeout{latex2htmlSize :tex2html_wrap_inline904: \the\ht\sizebox::\the\dp\sizebox.}\box\sizebox
+}
+
+\stepcounter{section}
+\stepcounter{subsection}
+{\newpage
+\clearpage
+\samepage \setbox\sizebox=\hbox{$a^nb^nc^n$}\lthtmltypeout{latex2htmlSize :tex2html_wrap_inline906: \the\ht\sizebox::\the\dp\sizebox.}\box\sizebox
+}
+
+{\newpage
+\clearpage
+\samepage \setbox\sizebox=\hbox{$\{a^nb^nc^n\}$}\lthtmltypeout{latex2htmlSize :tex2html_wrap_inline908: \the\ht\sizebox::\the\dp\sizebox.}\box\sizebox
+}
+
+\stepcounter{subsection}
+{\newpage
+\clearpage
+\samepage \setbox\sizebox=\hbox{$a^nb^nc^n$}\lthtmltypeout{latex2htmlSize :tex2html_wrap_inline910: \the\ht\sizebox::\the\dp\sizebox.}\box\sizebox
+}
+
+\stepcounter{section}
+\stepcounter{subsection}
+\stepcounter{subsection}
+\stepcounter{subsection}
+\stepcounter{section}
+\stepcounter{subsection}
+{\newpage
+\clearpage
+\samepage \begin{table}\begin{center}
+\begin{tabular}{|l|r|r|r|r|}
+\hline
+compiler &  DCG-emSP & DCG-natSP & DCG-emBP  & AG-emBP \\ \hline
+expr(4) (ms): & 230  & 110 & 320 & 340 \\ \hline
+expr(5) (ms): & 1930 & 840 & 2460 & 2980 \\ \hline
+expr(6) (ms): & 18910 & 8490 & 23410 & 25850 \\ \hline
+\end{tabular}
+\end{center}
+
+\end{table}
+}
+
+\stepcounter{subsection}
+\stepcounter{section}
+\stepcounter{subsection}
+\stepcounter{subsection}
+\stepcounter{section}
+\stepcounter{section}
+\stepcounter{section}
+{\newpage
+\clearpage
+\samepage \setbox\sizebox=\hbox{$\lambda$}\lthtmltypeout{latex2htmlSize :tex2html_wrap_inline912: \the\ht\sizebox::\the\dp\sizebox.}\box\sizebox
+}
+
+\stepcounter{paragraph}
+\stepcounter{paragraph}
+
+\end{document}

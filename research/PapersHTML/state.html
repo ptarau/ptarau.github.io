@@ -1,0 +1,1412 @@
+
+<CENTER>
+<H2>
+<FONT SIZE=+3>B</FONT>ACKTRACKABLE
+<FONT SIZE=+3>S</FONT>TATE
+<FONT SIZE=+3>with</FONT>
+<FONT SIZE=+3>L</FONT>INEAR<BR>
+<FONT SIZE=+3>A</FONT>SSUMPTIONS,
+<FONT SIZE=+3>C</FONT>ONTINUATIONS
+<FONT SIZE=+3>and</FONT><BR>
+<FONT SIZE=+3>H</FONT>IDDEN
+<FONT SIZE=+3>A</FONT>CCUMULATOR
+<FONT SIZE=+3>G</FONT>RAMMARS
+</H2>
+</CENTER>
+
+<pre>
+<A HREF="http://www.sciences.umoncton.ca/infoque/PAULT.HTM">
+Paul Tarau</A>
+Universit'e de Moncton
+D'epartement d'Informatique
+Moncton, N.B.  Canada, E1A 3E9,
+<B>tarau@info.umoncton.ca</B>
+ <A HREF="http://www......">
+Veronica Dahl </A>
+Logic Programming Group and
+Computing Sciences Department
+Simon Fraser University
+<B>veronica@cs.sfu.ca</B>
+ <A HREF="http://www.....">
+Andrew Fall</A>
+Logic Programming Group and 
+Computing Sciences Department
+Simon Fraser University
+<B>fall@cs.sfu.ca</B>
+</pre>
+
+<hr>
+<b>Abstract.</b><p>
+A set of executable specifications and efficient
+implementations of <i>backtrackable state</i>
+persisting over the current AND-continuation is investigated.
+<DD>
+At specification level, our primitive operations
+are linear and intuitionistic implications,
+having as consequent the current continuation.
+On top of them, we introduce
+a form of hypothetical assumptions which use no explicit
+quantifiers and have an easy and efficient
+implementation on top of logic programming
+systems featuring backtrackable destructive assignment,
+global variables.
+<DD>
+A variant of
+Extended DCGs handling multiple streams without the need of a
+preprocessing technique, Hidden Accumulator Grammars (HAGs),
+are specified in terms of linear assumptions.
+For HAGs,
+efficiency comparable to that of preprocessing techniques
+is obtained through a WAM-level
+implementation of backtrackable destructive assignment,
+supporting non-deterministic execution based on <i>value-trailing</i>, 
+while collapsing to a form
+of in-place update in case of deterministic execution.
+<DD>
+When more precise information about the location where
+linear assumptions are be <i>used</i> is available, either HAGs or
+a continuation based representation (<i>multi-headed</i> clauses)
+is used to avoid
+a performance penalty due to dynamic implementation.
+<DD>
+Not restricted to Prolog, the techniques described in the paper are 
+portable to alternative logic programming languages like
+Life, Lolli and \lambdaProlog.
+<P>
+<B> Keywords:</B>
+state in logic and functional programming,
+linear and intuitionistic implication,
+accumulator processing,
+alternative DCG implementations,
+destructive assignment, logical global variables,
+continuations.
+
+<P>
+<HR SIZE=4>
+
+<UL>
+<LI><A HREF="#INTRO">Introduction</A>
+<LI><A HREF="#STATE">State Information in Declarative Languages</A>
+  <UL>
+  <LI><A HREF="#STHREAD">Re-Usability of Single-Threaded Data Types</A>
+  <LI><A HREF="#SCOPL">Scope and State</A>
+  <LI><A HREF="#SHUNT">Scope Shunting</A>
+  <LI><A HREF="#RESOUR">State as a Resource</A>
+  </UL>
+<LI><A HREF="#HYPO">
+     Hypothetical Reasoning with Linear and Intuitionistic Logic</A>
+  <UL>
+  <LI><A HREF="#LINEAR">Assumed Code, Intutionistic and Linear Implication</A>
+  <LI><A HREF="#WEAKENING">On the <I>weakening</I> rule</A>
+  <LI><A HREF="#QUANT">Implicit `Quantification' Conventions</A>
+  <LI><A HREF="#TRANSL">Horn Clause Translation Semantics</A>
+  </UL>
+<LI><A HREF="#EXPRES">Expressiveness</A>
+  <UL>
+  <LI><A HREF="#LINDA">Linear Assumptions and the Linda Model</A>
+  <LI><A HREF="#GRAPH">
+       Loop-Avoidance in Graph Walking with Linear Implication</A>
+  <LI><A HREF="#ENH">Language Enhancements Based on Linear Implication</A>
+  </UL>
+<LI><A HREF="#ACC">Hidden Accumulator Grammars</A>
+  <UL>
+  <LI><A HREF="#SPEC">A Specification in Terms of Linear Assumptions</A>
+  <LI><A HREF="#WAM">High Performance Implementation of HAGs</A>
+  <LI><A HREF="#PORTAB">Portability</A>
+    <UL>
+    <LI><A HREF="#HAGLIFE">Hidden Accumulator Grammars in Life</A>
+    <LI><A HREF="#HADATALOG">Hidden Accumulator Datalog Grammars</A>
+    <LI><A HREF="#FILESTERMIN">Files as sets of Datalog grammar terminals</A>
+    </UL>
+  </UL>
+<LI><A HREF="#CONT">Continuation Grammars</A>
+<LI><A HREF="#REL">Related Work</A>
+<LI><A HREF="#FUTURE">Future Work</A>
+<LI><A HREF="#CONCL">Conclusion</A>
+<LI><A HREF="#REFS">References</A>
+</UL>
+
+<P>
+<HR SIZE=4>
+
+<CENTER>
+<B><a name="INTRO">
+<H3><FONT SIZE=+2>I</FONT>NTRODUCTION</H3></B>
+</CENTER>
+
+Intuitionistic logic and, more recently linear logic <A HREF="#f12">[Gir87]</A> have been influential on
+logic programming systems and the theory of logic programming
+<A HREF="#f20">[MN86]</A>,<A HREF="#f17">[Mil89b]</A>,<A HREF="#f13">[HM91]</A>,
+<A HREF="#f15">[Hod93]</A>.
+The result is not only a better understanding<A HREF="#footnote1">(1)</A> indicate that a formalism is likely to be computationally interesting. 
+of their proof-theoretical characteristics
+but also a growing
+awareness on the practical benefits of integrating them
+in conventional Prolog systems.
+<DD>
+In contrast to previous papers, 
+we will adopt here `the practitioner's perspective',
+with emphasis on immediate usability of working code
+in problem solving tasks. The concepts we have 
+borrowed from the (impressive!) previous research
+have been selected for their comparative
+expressiveness, and not without seeking
+various theoretical and practical alternatives.
+<DD>
+The initial motivation of this work was to design a set of
+powerful natural language processing tools 
+to deal with the complex hypothetical reasoning problems
+which arise, e.g.,
+when dealing with anaphora resolution, relatives, co-ordination 
+etc.<A HREF="#footnote2">(2)</A> .
+<DD>
+As we became aware during the process of implementing
+various tools, the outcome goes beyond the intended application
+domain to a unified approach to handle 
+backtrackable state information
+in nondeterministic declarative languages.
+<DD>
+The paper is organized as follows: <A HREF="#STATE">State Information in Declarative Languages</A> revisits
+the handling of state information in declarative
+languages. <A HREF="#HYPO">Hypothetical Reasoning with Linear and Intuitionistic Logic</A> presents our linear
+and intuitionistic implication based hypothetical reasoning
+tools and <A HREF="#EXPRES">Expressiveness</A> shows their usefulness in
+a few `proof-of-concept' applications. 
+In <A HREF="#ACC">Hidden Accumulator Grammars</A>,
+a type of grammars based on global objects
+with backtrackable state (HAGs) are specified
+in terms of linear assumptions, followed by the overview
+of their efficient WAM-level implementation.
+<A HREF="#CONT">Continuation Grammars</A> shows how first-order AND-continuations
+are used for implementing special cases of linear assumptions.
+<A HREF="#REL">Related Work</A> discusses related work and similar
+facilities in logic languages like Life. Future work is discussed
+in <A HREF="#FUTURE">Future Work</A> and our conclusions are given in 
+<A HREF="#CONCL">Conclusion</A>. 
+Two appendices in the techreport version
+of this paper <A HREF="#f11">[FTD95]</A> contain additional information
+on the actual WAM-implementation of HAGs and an example of
+higher-order objects with hypothetical state, implemented
+in our framework.
+
+<P>
+<HR SIZE=4>
+
+<CENTER>
+<B><a name="STATE">
+<H3><FONT SIZE=+2>S</FONT>TATE <FONT SIZE=+2>I</FONT>NFORMATION <BR>
+<FONT SIZE=+2>in</FONT> <FONT SIZE=+2>D</FONT>ECLARATIVE
+<FONT SIZE=+2>L</FONT>ANGUAGES</H3></B>
+</CENTER>
+
+We will start here with a quick overview of the problem
+of handling efficiently and cleanly state information
+in logical and functional languages.
+<DD>
+The basic problem is that in the general case, expressing
+change contradicts some of the basic principles
+functional and logic languages are built on.
+
+<P>
+<HR SIZE=4>
+
+<B><a name="STHREAD">
+<H4><FONT SIZE=+1>R</FONT>E -<FONT SIZE=+1>U</FONT>SABILITY
+<FONT SIZE=+1>of</FONT> 
+<FONT SIZE=+1>S</FONT>INGLE-<FONT SIZE=+1>T</FONT>HREADED
+<FONT SIZE=+1>D</FONT>ATA <FONT SIZE=+1>T</FONT>YPES</H4></B>
+
+Objects having a unique producer and a unique
+consumer are frequent in declarative programming languages.
+<DD>
+Work on linear types <A HREF="#f27">[Wad91]</A>, monads 
+<A HREF="#f28">[Wad93]</A>  and linear language constructs 
+<A HREF="#f4">[Bak92]</A> in functional programming has shown that 
+single-threaded objects are subject to <i>in-place update</i>  within a reasonably 
+clean semanti framework.
+<DD>
+In Prolog, the hidden arguments of DCG grammars correspond
+to a chain of variables, having exactly two occurrences each, as in 
+
+<PRE>     a(X1,X4):-b(X1,X2),c(X2,X3),d(X3,X4).
+</PRE>
+
+ We can see the chain of variables as successive states
+of a unique object.
+<DD>
+However, in the presence of backtracking, previous values
+must be kept for use by alternative branches. 
+This situation conflicts with possibility of reuse, and makes
+single-threaded objects more complex (but, arguably more powerful)
+in non-deterministic LP languages than in committed choice
+or functional languages.
+<DD>
+Our solution will be to reuse the space for
+single-threaded chains of variables
+while in a deterministic branch and
+value-trail (i.e. keep the address of the variable and its value
+on the trail-stack) otherwise. 
+Clearly, for a single-threaded
+object, one such value-trailing operation by choice-point
+is enough. We will describe how this is done
+in BinProlog <A HREF="#f22">[Tar95]</A>
+using a simple address comparison technique in <A HREF="#WAM">High Performance Implementation of HAGs</A>.
+
+<P>
+<HR SIZE=4>
+
+<B><a name="SCOPL">
+<H4><FONT SIZE=+1>S</FONT>COPE <FONT SIZE=+1>and</FONT> <FONT SIZE=+1>S</FONT>TATE</H4></B>
+
+It is important, for a given programming paradigm to identify
+the appropriate concept of state. 
+For non-deterministic logic programming languages like Prolog,
+the natural scope for the state of an object  is the current
+AND-continuation<A HREF="#footnote3">(3)</A>, as we want to take advantage
+of re-usability on a deterministic AND-branch in the resulting
+tree-oriented resolution process.
+<DD>
+This suggests that we need the
+ability of extending the scope of a state transition
+over the current continuation, instead of keeping it local
+to the body of a clause.  This will be the main reason why our
+linear and intuitionistic assumptions are scoped
+over the current continuation.
+
+<P>
+<HR SIZE=4>
+
+<B><a name="SHUNT">
+<H4><FONT SIZE=+1>S</FONT>COPE <FONT SIZE=+1>S</FONT>HUNTING</H4></B>
+
+Suppose that a backtrackable <i>assume</i> primitive is
+efficiently implemented in a given language, where assumptions
+range over the future of the current AND branch.
+Note that it is easy to shunt down an arbitrary future segment in the
+current continuation by binding a logical variable serving
+as a guard. This is actually the technique used for
+BinProlog's definition of implication:
+
+<PRE>(C => G) :-   
+  assume(Scope,C),  
+  G,   
+  Scope='$closed'.
+</PRE>
+
+ It ensures, with an appropriate test at <i>calling time</i>, that
+assumption <b>C</b> is local to the proof 
+of <b>G</b><A HREF="#footnote4">(4)</A>.
+
+<P>
+<HR SIZE=4>
+
+<B><a name="RESOUR">
+<H4><FONT SIZE=+1>S</FONT>TATE <FONT SIZE=+1>as</FONT>
+<FONT SIZE=+1>a</FONT> <FONT SIZE=+1>R</FONT>ESOURCE</H4></B>
+
+Another important parameter besides scoping is definite or
+indefinite usability of an assumption.
+It is quite familiar, with the advent of Linear Logic <A HREF="#f12">[Gir87]</A>, to see
+axioms and theorems as resources with a possibly limited
+number of uses.
+<DD>
+Coordination languages like 
+Carrierro and Gelernter's Linda <A HREF="#f7">[CG89]</A> will therefore <i>move</i>
+(and <b>not</b> <i>copy</i>)
+objects between a tuple space called <i>blackboard</i>
+and individual processes to ensure not only information exchange but 
+also synchronisation with a very limited number of simple primitive operations:
+
+<UL>
+<LI> <b>out/1</b> copies an object to the blackboard
+<LI> <b>in/1</b> moves a `matching' object back in process space or blocks until it is available
+<LI> <b>rd/1</b> checks availability of a matching object on the
+blackboard and signals failure otherwise.
+</UL>
+
+<P>
+<HR SIZE=4>
+
+<CENTER>
+<B><a name="HYPO">
+<H3><FONT SIZE=+2>H</FONT>YPOTHETICAL <FONT SIZE=+2>R</FONT>EASONING<BR>
+<FONT SIZE=+2>with</FONT> <FONT SIZE=+2>L</FONT>INEAR
+<FONT SIZE=+2>and</FONT> <FONT SIZE=+2>I</FONT>NTUITIONISTIC
+<FONT SIZE=+2>L</FONT>OGIC</H3></B>
+</CENTER>
+
+<P>
+<HR SIZE=4>
+
+<B><a name="LINEAR">
+<H4><FONT SIZE=+1>A</FONT>SSUMED <FONT SIZE=+1>C</FONT>ODE,
+<FONT SIZE=+1>I</FONT>NTUTIONISTIC <FONT SIZE=+1>and</FONT>
+<FONT SIZE=+1>L</FONT>INEAR <FONT SIZE=+1>I</FONT>MPLICATION</H4></B>
+
+Although the Linda framework is already implemented as
+an extension to BinProlog <A HREF="#f8">[DBT93]</A>, it does not
+provide hypothetical reasoning facilities due to the
+non-backtrackable nature of the blackboard operations
+which, like <b>assert</b> and <b>retract</b>, would produce
+imperative state changes.
+ <DD>
+We have implemented some new hypothetical reasoning
+facilities on top of the BinProlog abstract machine which
+already had backtrackable destructive assignment and
+a form of logical global  variables.
+We will give a short description of the primitive operations
+and point out some of the differences with other implementations.
+<DD>
+Intuitionistic <b>assumei/1</b> adds temporarily a clause usable
+in subsequent proofs. Such a clause can be used an indefinite
+number of times, like asserted clauses, except that it
+vanishes on backtracking.
+<DD>
+Its scoped versions <b>Clause=>Goal</b> and <b>[File]=>Goal</b>
+make <b>Clause</b> or respectively the set of clauses found in <b>File</b>,
+available only during the proof of Goal.
+Clauses assumed with <b>=></b> are usable an indefinite number of times in the proof, e.g.
+<b>?-assumei(a(13)),a(X),a(Y)</b> will succeed.
+<DD>
+Linear assumel/1 adds a clause usable <i>at most once</i>
+in subsequent proofs. This assumption also vanishes on backtracking.
+Its scoped version <b>Clause -: Goal</b><A HREF="#footnote5">(5)</A> or <b>[File] -: Goal</b>
+makes <b>Clause</b> or the set of clauses found in <b>File</b>
+available only during the proof of Goal. They vanish on backtracking and
+each clause is usable at most once in the proof, i.e.
+<b>?-assumel(a(13)),a(X),a(Y)</b> will fail.
+<dd>
+We can see the assumel/1 and assumei/1 builtins
+as linear and respectively intuitionistic implication
+scoped over the current AND-continuation, i.e. having their
+assumptions available in future computations on the <i> same</i> resolution
+branch.
+<DD>
+Achieving this at source level by explicit continuation handling
+is possible, although somewhat complex and inefficient</b>
+<A HREF="#footnote6">(6)</A>.
+Roughly speaking, <b>assumei/1</b> and <b> assumel/1</b> could have
+been defined as:
+
+<PRE>assumei(Clause):- 
+  get_cc(CurrentContinuation),
+  Clause => CurrentContinuation.
+
+assumei(Clause):- 
+  get_cc(CurrentContinuation),
+  Clause -: CurrentContinuation.
+</PRE>
+
+We have prefered to go the other way around and implement 
+<b> assumei/1</b> and <b> assumel/1</b> as primitives,
+while implementing the scoped implications on top of them,
+using the <i> scope shunting</i> technique described in <A HREF="#SHUNT">Scope Shunting</A>.
+
+<P>
+<HR SIZE=4>
+
+<B><a name="WEAKENING">
+<H4><FONT SIZE=+1>O</FONT>N <FONT SIZE=+1>T</FONT>HE
+<I><FONT SIZE=+1>W</FONT>EAKENING</I> <FONT SIZE=+1>R</FONT>ULE</H4></B>
+
+The <i>weakening</i> rule in linear logic requires every assumption
+to be eventually used. 
+<DD>
+Often, when assumptions range over the current
+continuation, this requirement seems too strong, except for
+the well-known situation of handling relatives through the use
+of gaps <A HREF="#f14">[Hod92]</A>.
+<DD>
+Therefore, BinProlog's linear implication will succeed even if not
+all the assumptions are consumed <i>weakening</i> is allowed), while in systems like Lolli their `consumption' is a strong requirement, i.e. it is enforced for success.
+<DD>
+We found our choice practical and not unreasonably restrictive, as
+for a given linear predicate, negation as failure at the
+end of the proof can be used
+by the programmer to check if
+the assumption has been actually consumed.
+It is also possible to check through the addition of
+a low-level primitive,
+that at a given point, the set of all linear assumptions 
+is empty.
+
+<P>
+<HR SIZE=4>
+
+<B><a name="QUANT">
+<H4><FONT SIZE=+1>I</FONT>MPLICIT 
+<FONT SIZE=+1>'Q</FONT>UANTIFICATION<FONT SIZE=+1>'</FONT>
+<FONT SIZE=+1>C</FONT>ONVENTIONS</H4></B>
+
+Although intuitionistic logic based
+systems like \lambdaProlog and linear logic implementations
+usually support quantification with the benefit of
+additional expressiveness, we have chosen
+(in compliance with the usual Horn Clause convention) to
+avoid explicit quantifications, 
+for reasons of conceptual parsimony
+and simplicity
+of implementation on top of a generic Prolog compiler.
+
+<DD>
+As linear assumptions are consumed on the first use,
+and their object is guaranteed to exist on the heap
+within the same AND-branch, no copying is performed
+and unifications occur on the actual clause.
+This can be seen (through the usual language abuse) 
+as implicit `existential quantification'.
+On the other hand, intuitionistic implications and assumptions follow
+the usual `copy-twice' semantics<A HREF="#footnote7">(7)</A>
+of assert and retract, and can be seen as being
+`universally quantified'</b><A HREF="#footnote8">(8)</A>.
+
+<P>
+<HR SIZE=4>
+
+<B><a name="TRANSL">
+<H4><FONT SIZE=+1>H</FONT>ORN <FONT SIZE=+1>C</FONT>LAUSE
+<FONT SIZE=+1>T</FONT>RANSLATION <FONT SIZE=+1>S</FONT>EMANTICS</H4></B>
+
+We have implemented <b> assumei/1</b> and <b> assumel/1</b>
+in BinProlog entirely at source level<A HREF="#footnote9">(9)</A>, with
+backtrackable destructive assignement used only
+for efficiency reasons. Clearly, our implicit quantification rules ensure that
+linear assumptions can be given a Horn Clause `translation semantics'
+in terms of DCG-style accumulator processing, by keeping
+the list of assumed clauses in a chain of DCG arguments,
+following the preprocessing technique described in <A HREF="#f23">[TB89]</A>.
+On the other hand, intuitionistic assumptions can be expressed
+at source level in terms of Horn Clause Logic with the addition
+of a copying primitive (available as <b>copy_term/2</b> in ISO-Prolog).
+
+
+<P>
+<HR SIZE=4>
+
+<CENTER>
+<B><a name="EXPRES">
+<H3><FONT SIZE=+2>E</FONT>XPRESSIVENESS</H3></B>
+</CENTER>
+
+We will show in this section that our proposed extensions are able
+to express elegantly constructs which have been found useful in the past.
+
+<P>
+<HR SIZE=4>
+
+<B><a name="LINDA">
+<H4><FONT SIZE=+1>L</FONT>INEAR <FONT SIZE=+1>A</FONT>SSUMPTIONS<FONT SIZE=+1>and</FONT> <FONT SIZE=+1>the</FONT>
+<FONT SIZE=+1>L</FONT>INDA <FONT SIZE=+1>M</FONT>ODEL</H4></B>
+
+The basic transactions of the Linda model
+<A HREF="#f7">[CG89]</A> 
+(<b>in/1</b> and <b>out/1</b>) correspond closely to our assumptions scoped
+over the current continuation.
+<DD>
+Let us suppose that our assumptions are constrained to be ground facts and
+that the operations on the Linda blackboard are intended to be
+backtrackable.
+Then <b>assumel/1</b> is just the usual <b>out/1</b> Linda operation and
+calling the linearly assumed fact is just the usual <b>in/1</b> operation!
+<DD>
+This shows that Linear Logic basically subsumes
+the Linda framework and we can in principle build our operations
+on top of existing Linda systems, while using
+the blocking/non-blocking variants of the <b>in/1</b> operation
+for co-ordination between parallel threads.
+<DD>
+The third Linda operation, <b>rd/1</b> can be expressed as
+<b>rd(X):-X,assumel(X)</b>.
+
+<P>
+<HR SIZE=4>
+
+<B><a name="GRAPH">
+<H4><FONT SIZE=+1>L</FONT>OOP-<FONT SIZE=+1>A</FONT>VOIDANCE
+<FONT SIZE=+1>in</FONT> <FONT SIZE=+1>G</FONT>RAPH
+<FONT SIZE=+1>W</FONT>ALKING <FONT SIZE=+1>with</FONT>
+<FONT SIZE=+1>L</FONT>INEAR <FONT SIZE=+1>I</FONT>MPLICATION</H4></B>
+
+It is unexpectedly easy to write a linear implication based graph walking
+program. It will avoid falling in a loop simply because linear
+implication (<b>-:</b>) assumes facts that are usable only once (i.e.
+consumed upon their successful unification with a goal).
+
+<PRE>path(X,X,[X]).
+path(X,Z,[X|Xs]):-linked(X,Y),path(Y,Z,Xs).
+
+linked(X,Y):-c(X,Ys),member(Y,Ys).
+
+start(Xs):-
+  c(1,[2,3])-:c(2,[1,4])-:c(3,[1,5])-:c(4,[1,5])-:
+  path(1,5,Xs).
+</PRE>
+
+ By executing <b>?-start(Xs)</b>, we will avoid the loop 
+<b>1-2-1</b> and obtain the expected paths:
+
+<PRE>  Xs=[1,2,4,5];
+  Xs=[1,3,5]
+</PRE>
+
+Note that the adjacency list representation ensures that each node
+represented as a linear assumption <b>c/2</b> becomes unavailable,
+once visited. Note also that enforcing <i>weakening</i> would
+give a hamiltonian walk<A HREF="#footnote10">(10)</A>.
+
+<P>
+<HR SIZE=4>
+
+<B><a name="ENH">
+<H4><FONT SIZE=+1>L</FONT>ANGUAGE <FONT SIZE=+1>E</FONT>NHANCEMENTS
+<FONT SIZE=+1>B</FONT>ASED <FONT SIZE=+1>on</FONT>
+<FONT SIZE=+1>L</FONT>INEAR <FONT SIZE=+1>I</FONT>MPLICATION</H4></B>
+
+Linear implication can be used to quickly add some language
+enhancements to a Prolog system. For instance, to add
+a <b>switch</b> \ldots<b>case</b> statement one can write simply:
+
+<PRE>switch(Selector,Body):-
+  case(Selector) -: Body.
+
+default:-case(_).
+
+test(X):-
+  switch(X, (
+     case(1)->write(one) ;
+     case(2)->write(two) ;
+     default->write(unexpected(X))
+  ))
+ ,nl.
+</PRE>
+
+Clearly, this is a very compact source-level implementation
+for a <b>switch</b> construct, useful at least as a specification. 
+Note however, that this should be done with macro expansion in 
+a real implementation, to ensure constant dispatching time on the <b>case</b> label.
+We have chosen <i>default/0</i> to consume the assumption <b>case/1</b>
+so that this should also work when <i>weakening</i> is 
+enforced by the implementation (as it is the case in the Lolli system).
+<DD>
+We refer to the techreport version of this paper
+<A HREF="#f25">[TDF95]</A> for an implementation in our framework of
+backtrackable `higher-order' state in the form  `replicating' objects.
+
+<P>
+<HR SIZE=4>
+
+<CENTER>
+<B><a name="ACC">
+<H3><FONT SIZE=+2>H</FONT>IDDEN
+<FONT SIZE=+2>A</FONT>CCUMULATOR
+<FONT SIZE=+2>G</FONT>RAMMARS</H3></B>
+</CENTER>
+
+<P>
+<HR SIZE=4>
+
+<B><a name="SPEC">
+<H4><FONT SIZE=+1>A</FONT> 
+<FONT SIZE=+1>S</FONT>PECIFICATION
+<FONT SIZE=+1>in</FONT>
+<FONT SIZE=+1>T</FONT>ERMS
+<FONT SIZE=+1>of</FONT>
+<FONT SIZE=+1>L</FONT>INEAR
+<FONT SIZE=+1>A</FONT>SSUMPTIONS</H4></B>
+
+With <b>assumel/1</b> linear assumptions scoping over the current 
+continuation,
+we can easily specify
+a superset of DCG grammars practically equivalent to 
+Peter Van Roy's Extended DCGs <A HREF="#f26">[Van89]</A>
+and their Life <A HREF="#f1">[AKP91]</A> counterparts. We call them 
+<i> Hidden Accumulator Grammars</i>
+as no preprocessing will be involved in their implementation.
+It turns out that the technique
+has the advantage of `meta-programming for free' (without the
+expensive phrase/3, doing either meta-interpretation
+or on-the-fly DCG-expansion), 
+it allows source level debugging, and it can be made
+more space and time efficient than the usual preprocessing based
+implementation. As in the case of EDCGs, their best
+use is for writing a Prolog
+compiler (they can
+contribute to the writing of compact and efficient code
+with very little programming effort) and, as shown
+in <A HREF="#f11">[FTD95]</A>,
+also for complex natural language processing systems.
+<DD>
+Hidden Accumulator Grammars (shortly HAGs) are specified as follows:
+
+<PRE>% creates and initializes a named `DCG' stream
+l_def(Name,Xs):-l_dcg(Name,_),!,assumel(l_dcg(Name,Xs)).
+l_def(Name,Xs):-assumel(l_dcg(Name,Xs)).
+
+% unifies with the current state of a named `DCG' stream
+l_val(Name,Xs):-l_dcg(Name,Xs),assumel(l_dcg(Name,Xs)).
+
+% equivalent of the `C'/3 step in Prolog
+l_connect(Name,X):-l_dcg(Name,[X|Xs]),assumel(l_dcg(Name,Xs)).
+
+% equivalent of phrase/3 in Prolog
+l_phrase(Name,Axiom,Xs):-l_def(Name,Xs),Axiom,l_val(Name,[]).
+
+% file I/O inspired metaphors for switching between streams
+l_tell(Name):-l_name(_),!,assumel(l_name(Name)).
+l_tell(Name):-assumel(l_name(Name)).
+
+l_telling(Name):-l_name(Name),assumel(l_name(Name)).
+l_telling(Name):-l_default(Name).
+
+% projection of previous operations on default DCG stream
+l_def(Xs):-l_telling(Name),!,l_def(Name,Xs).
+l_def(Xs):-l_default(Name),l_tell(Name),l_def(Name,Xs).
+
+l_val(Xs):-l_telling(Name),l_val(Name,Xs).
+
+l_connect(X):-l_telling(Name),l_connect(Name,X).
+
+l_phrase(Axiom,Xs):-l_telling(Name),l_def(Xs),l_phrase(Name,Axiom,Xs).
+
+l_default(1).
+
+% syntactic sugar for `connect' relation
+{W}:-l_connect(W).
+
+% example
+axiom:-ng,v.   ng:-a,n.
+a:-{the}.      a:-{a}.
+n:-{cat}.      n:-{dog}.
+v:-{walks}.    v:-{sleeps}.
+
+go:-l_phrase(axiom,Xs),write(Xs),nl,fail.
+</PRE>
+
+<P>
+<HR SIZE=4>
+
+<B><a name="WAM">
+<H4><FONT SIZE=+1>H</FONT>IGH <FONT SIZE=+1>P</FONT>ERFORMANCE
+<FONT SIZE=+1>I</FONT>MPLEMENTATION <FONT SIZE=+1>of</FONT>
+<FONT SIZE=+1>HAG</FONT>S</H4></B>
+
+For reasons of efficiency (i.e. to equal or beat preprocessor based DCGs
+in terms of both space and time)
+BinProlog's HAGs have been implemented in C  and are
+accessible through the following set of builtins:
+
+<PRE>dcg_connect/1  % works like 'C'/3 with 2 invisible arguments
+dcg_def/1   % sets the first invisible DCG argument
+dcg_val/1   % retrieves the current state of the DCG stream
+dcg_tell/1  % focusses on a given DCG stream
+dcg_telling/1 % returns the number of the current DCGs stream
+
+% connect operation: normally macro-expanded
+'#'(Word):-dcg_connect(Word).
+
+% example: ?-dcg_phrase(1,(#a,#b,#c),X).
+dcg_phrase(DcgStream,Axiom,Phrase):-
+  dcg_telling(X),dcg_tell(DcgStream),
+    dcg_def(Phrase),
+      Axiom,
+    dcg_val([]),
+  dcg_tell(X).
+</PRE>
+
+<DD>Starting with BinProlog 3.36 <b>dcg_tell/1</b> is backtrackable, 
+mostly like the <b> lval/3</b> used to handle
+global logical variables</b><A HREF="#footnote11">(11)</A>. 
+This makes HAGs fully equivalent to a source-level
+specification which would add chains of DCG-variables as
+pairs of extra arguments for each stream. Note that
+this functionality 
+is obtained despite the fact that we do not require
+the (relatively tedious) declarations 
+needed in the original EDCGs and in Wild-Life,
+which specify for
+each predicate the accumulators they make use of. 
+<DD>
+Hidden Accumulator Grammars consume no heap as they do
+not generate the existential
+variables introduced by the usual DCG transformation.
+Instead,
+backtrackable destructive assigment implemented with 
+<i> value trailing</i><A HREF="#footnote12">(12)</A>  
+is used. The builtin <b>dcg_connect/1</b> 
+can be seen as using a `partially-evaluated' 
+version of BinProlog's <b> setarg/3</b>. It
+consumes trail-space only when a nondeterministic situation (choice-point)
+arises. This is achieved by address-comparison with the
+top of the heap, saved in the choice-point. With cooperation
+from builtins which want to benefit from the technique
+by `stamping' the heap with an extra cell inserted in the reference
+chain to the value-trailed objects, further attempts
+to trail the same address 
+will see it as being above the last choice point.
+This is complemented with
+a very efficient, if-less <i> un-trailing</i> operation
+based on indirect address calculation. 
+As BinProlog's <b> setarg/3</b> is already
+about 2-3 times faster than the one in SICStus
+and <b>dcg_connect/1</b> actually uses a
+specialized instance of <b> setarg/3</b>,
+the overall performance of this <i> run-time</i> technique
+is superior to the static, transformation based
+approach. Besides their space efficiency, HAGs are also usually
+faster than their preprocessor based equivalents, while
+offering multiple-stream functionality.
+
+<P>
+<HR SIZE=4>
+
+<B><a name="PORTAB">
+<H4><FONT SIZE=+1>P</FONT>ORTABILITY</H4></B>
+
+<P>
+<HR SIZE=4>
+
+<B><a name="HAGLIFE">
+<B>H<FONT SIZE=-1>IDDEN</FONT>
+A<FONT SIZE=-1>CCUMULATOR</FONT> 
+G<FONT SIZE=-1>RAMMARS</FONT> in
+L<FONT SIZE=-1>IFE</FONT></B><p></B>
+
+Porting Hidden Accumulator Grammars to a language which has
+global variables and backtrackable destructive assignment
+is easy. Here is the code for Wild-Life <A HREF="#f1">[AKP91]</A>.
+
+<PRE>global(dcg_stream)?
+
+dcg_def(Xs) :- dcg_stream <- s(Xs).
+dcg_val(Xs) :- dcg_stream = s(Xs).
+dcg_connect(X) :- dcg_stream = s([X|Xs]), dcg_stream <- s(Xs).
+dcg_phrase(Axiom,Xs) :- dcg_def(Xs), Axiom, dcg_val([]).
+</PRE>
+
+<DD>Extending this to multiple dcg\_streams is straightforward.
+The facility complements preprocessor based accumulators
+already existing in Life.
+
+<P>
+<HR SIZE=4>
+
+<B><a name="HADATALOG">
+<B>H<FONT SIZE=-1>IDDEN</FONT>
+A<FONT SIZE=-1>CCUMULATOR</FONT> 
+D<FONT SIZE=-1>ATALOG</FONT> in
+G<FONT SIZE=-1>RAMMARS</FONT></B><p></B>
+
+Prolog's DCG list-based implementation
+can also be replaced with an assertional representation
+as in Datalog grammars <A HREF="#f9">[DTH94]</A>,<A HREF="#f10">[DTMP95]</A>,
+as the following example shows.
+
+<PRE>
+{W}:-dcg_val(N),'D'(W,N,NewN),dcg_def(NewN).
+
+dlg_phrase(Axiom,End):-dcg_def(0),Axiom,dcg_val(End).
+  
+x:-ng,v.     ng:-a,n.
+a:-{the}.    a:-{a}.
+n:-{cat}.    n:-{dog}.
+v:-{walks}.  v:-{sleeps}.
+
+'D'(a,0,1).
+'D'(cat,1,2).
+'D'(walks,2,3).
+
+?-dlg_phrase(x,N).
+</PRE>
+
+<DD>We see here a strong argument for not standardizing DCGs
+in the forthcoming ISO-Prolog, because it is now clear 
+that they are only a possible, one-stream <i> implementation</i>
+of a more general construct.
+The complexities of interaction between the DCG
+program transformer, <b> phrase</b>
+and builtins like CUT are, by the way,
+entirely avoided with HAGs and their DLG counterparts.
+
+<P>
+<HR SIZE=4>
+
+<B><a name="FILESTERMIN">
+<B>F<FONT SIZE=-1>ILES</FONT> as
+S<FONT SIZE=-1>ETS</FONT> of
+D<FONT SIZE=-1>ATALOG</FONT>
+G<FONT SIZE=-1>RAMMAR</FONT>
+T<FONT SIZE=-1>ERMINALS</FONT></B><p></B>
+
+It is convenient (and often mandatory) for large-sized natural language
+processing systems to be able to work directly on files.
+<DD>
+By working directly on the file position pointer,
+our Hidden Accumulator based DLGs can easily handle
+grammars working on an input sequence of a practically arbitrary size.
+<DD>
+Let's note that instead of
+
+<PRE>'D'(elephant,3,4)</PRE>
+
+we can refer to something as <b>'D'(elephant,FilePos1,FilePos2)</b>, corresponding to the actual position in a file of the word <b>elephant</b>
+the grammar expects.
+<DD>
+As most Prolog systems have direct file-positioning primitives,
+with this representation we can obtain
+a logic grammar working directly on a file
+without using a list representation.
+<DD>
+This is also useful in case of incremental processing of the content
+of the file, when only the segment between 2 file-positions is processed.
+
+
+<P>
+<HR SIZE=4>
+
+<CENTER>
+<B><a name="CONT">
+<H3><FONT SIZE=+2>C</FONT>ONTINUATION
+<FONT SIZE=+2>G</FONT>RAMMARS</H3></B>
+</CENTER>
+
+As continuations are first order objects in BinProlog,
+they can be actually used for  efficiently implementing
+special instances of intuitionistic assumptions.
+<DD>
+We refer to <A HREF="#f24">[TD94]</A> for their use as <i> continuation grammars</i>
+which successfully replace push-back lists in DCGs through the use
+of a multi-headed clause mechanism. We will only give here
+an example showing how an <i> implication</i> based
+programming style can be emulated in terms of <i> continuation manipulation</i>,
+when the precise location of the <i> use</i> of an assumption is predictable.
+<DD>
+One of Miller's motivating examples
+for (intuitionistic) implication in \lambdaProlog</b>
+<A HREF="#footnote13">(13)</A> <A HREF="#f16">[Mil89a]</A>,
+is the <b> reverse</b> predicate. 
+
+<PRE>reverse(L,K) :-
+  all rv\( ( rv([],K),
+             all X,N,M\ (rv([X|N],M) :- rv(N,[X|M]))
+           ) => rv(L,[])
+         ).
+</PRE>
+
+We rewrite it here (in BinProlog syntax) with the
+(more efficient) use of linear implication.
+
+<PRE>reverse(Xs,Ys):-
+  result(Ys) -: rev(Xs,[]).
+
+rev([],Ys):-result(Ys).
+rev([X|Xs],Ys):-rev(Xs,[X|Ys]).
+</PRE>
+
+<DD>Our example will already run at least one order of magnitude faster because the recursive clause (which dominates execution time)
+is statically known.
+Note also the convenience and flexibility of our implicit
+quantification rules.
+<DD>
+By using the <i> multi-headed clauses</i> of <A HREF="#f24">[TD94]</A>
+which allow a (relatively) high level manipulation of
+the current continuation we can write a such a reverse predicate as follows:
+
+<PRE>  reverse(Xs,Ys):-rev(Xs,[]),result(Ys).
+
+    rev([],Ys), result(Ys).
+    rev([X|Xs],Ys):-rev(Xs,[X|Ys]).
+</PRE>
+
+which gives after binarization:
+
+<PRE>  reverse(Xs,Ys,Cont):-rev(Xs,[],result(Ys,Cont)).
+
+    rev([],Ys, result(Ys,Cont)) :- true(Cont).
+    rev([X|Xs],Ys,Cont):-rev(Xs,[X|Ys],Cont).
+</PRE>
+
+with a suitable definition for <b>true/1</b> as:
+
+<PRE>    true(C):-C.</PRE>
+
+ and with a clause like
+
+<PRE>    reverse(Xs,Ys):-reverse(Xs,Ys,true).
+</PRE>
+as interface.
+<DD>
+Further speed-up comes from the fact
+that no dynamic clause creation/search is needed for the
+basic case of the recursive predicate <b> rev/2</b>.
+We have measured that this predicate executes exactly as fast as its equivalent accumulator based Prolog version, which means that
+when this transformation is possible because of the <i> known</i> place where
+linear assumptions will be used, our continuation based implementation
+of linear implication adds no overhead
+compared with static code. %, despite its apparently dynamic nature.
+
+<P>
+<HR SIZE=4>
+
+<CENTER>
+<B><a name="REL">
+<H3><FONT SIZE=+2>R</FONT>ELATED
+<FONT SIZE=+2>W</FONT>ORK</H3></B>
+</CENTER>
+
+Compared with other Linear (Intuitionistic) Logic
+based systems like Lolli <A HREF="#f15">[Hod93]</A>,
+our approach is implemented on top of a generic Prolog engine,
+with a deliberate omission of <i> weakening</i> rule enforcement
+and explicit quantifiers. Accumulators are seen here
+as an even more specific instance of our already
+linear operations.
+<DD>
+Accumulators have been invented to
+support uniform operation on single-threaded stateful data,
+which exhibits an associative or <i> monadic</i> structure.
+They generalize Prolog's DCGs which carry around information
+on the state of a list representing the string generated or
+recognized by a grammar. Accumulators have been  
+implemented in the original proposal <A HREF="#f26">[Van89]</A>
+and in the Life system <A HREF="#f2">[AKP93]</A> through a preprocessor which
+adds them as extra arguments at source level, while
+our proposal handles the hidden arguments directly as state of global objects, 
+subject to backtrackable destructive assignment.
+Multiple accumulators are naturally needed
+in compiler writing, corresponding
+to the multiple streams of information 
+(input sequence, syntactic structure construction, error position,
+symbol table construction, instructions of intermediate code etc.).
+Similar multiple streams arise in natural language
+processing with various kinds of logic grammars.
+<DD>
+Preprocessor based approaches like
+the Extended DCGs <A HREF="#f26">[Van89]</A> and
+Soft Databases <A HREF="#f23">[TB89]</A>
+are based on a program transformation which
+adds extra arguments and deals with their state
+using a set of Abstract Data Type operations.
+This state can be seen as data-only <A HREF="#f26">[Van89]</A> or
+as a form of dynamic code, appropriate for hypothetical reasoning
+<A HREF="#f23">[TB89]</A>.
+In Life <A HREF="#f1">[AKP91]</A> accumulators have an
+additional object-oriented flavor: an arbitrary
+method can be executed as the accumulator's state
+advances. This action is backtrackable, as is the advancement
+in the input list in the case of ordinary DCGs. 
+This more general feature is expressed in our framework
+directly by implementing objects on top of intuitionistic
+and linear assumptions, although HAGs can be used to do it
+more efficiently. 
+To avoid passing extra arguments to predicates which do not use
+them, the accumulator preprocessor of <b> Wild-Life 1.01</b>
+requires <b>pred_info</b> declarations saying which
+predicates make use of which accumulators. For instance,
+
+<PRE>pred_info([p,q],[a])?</PRE>
+
+will indicate that predicates p and q will have
+extra features for keeping accumulator states, i.e.:
+
+<PRE>p:--q,p?</PRE>
+
+and it will be translated as:
+
+<PRE>p(in_a=>S1,out_a=>S3):-
+    q(in_a=>S1,out_a=>S2),
+    p(in_p=>S2,out_p=>S3).
+</PRE>
+
+The generalization over DCGs is that multiple extra feature
+pairs can be defined.
+<DD>
+The <b>acc_info</b> declarations complement 
+<b>pred_info</b> declarations by describing what
+kind of methods are triggered when the state of the
+accumulator pair advances.
+<DD>
+The main advantage of our Hidden Accumulator Grammars
+technique is that no declarations
+and no preprocessing potentially hiding
+the programmer's intent at source level are required.
+This becomes important for easier debugging
+and use of meta-programming constructs</b><A HREF="#footnote14">(14)</A>.
+<DD>
+Working with continuations <A HREF="#f6">[BR93]</A>
+is usual in systems like \lambdaProlog-MALI
+<A HREF="#f5">[BR92]</A> but fairly intricate.
+We think that our
+primitives <b> assumel/1</b> and <b> assumei/1</b>,
+explicitly designed as scoped over the current continuation,
+are simple enough for use by the ordinary programmer.
+
+<P>
+<HR SIZE=4>
+
+<CENTER>
+<B><a name="FUTURE">
+<H3><FONT SIZE=+2>F</FONT>UTURE
+<FONT SIZE=+2>W</FONT>ORK</H3></B>
+</CENTER>
+
+Once familiarized with the idea that clauses are
+resources, it becomes clear that the
+default assumptions of linear logic have interesting
+alternatives. First, the question on when the `right-to-use'
+should be specified arises (i.e. either at
+<i> definition</i> or at <i> use</i> time, or through a more complex
+combination of attributes involving both). This is largely problem
+dependent. A given `protocol' can be often easily emulated
+in terms of an alternative, but for a price (in efficiency and/or simplicity).
+For instance, in the case of distributed languages,
+allowing <i> multiple readers</i> is very important in terms of efficiency.
+This should be expressed easier than with a combination
+of consume/produce-again operations as it is done in Linear Logic
+(the more practically-minded Linda framework provides this
+as a primitive operation).
+<DD>
+A formalization of the subset of linear and intuitionistic
+logic we have implemented and described in the paper,
+together with its `translation semantics' would help
+to clarify some of the remaining ambiguities.
+<DD>
+On the implementation side,
+further research is needed
+on inferring more, statically, 
+about particular instances of 
+linear and intuitionistic assumptions,
+which would allow very small overhead over
+classical statically compiled code.
+<DD>
+A larger efficiently executable subset of linear and
+intuitionistic logic is intended to be gradually
+added to BinProlog, with emphases on parametric
+modules, ability to handle open programs
+and abductive reasoning.
+Porting to Wild-Life (and its possible fully compiled
+sucessor) the
+facilities described in the paper
+has been started and will continue in the
+future. 
+
+<P>
+<HR SIZE=4>
+
+<CENTER>
+<B><a name="CONCL">
+<H3><FONT SIZE=+2>C</FONT>ONCLUSION</H3></B>
+</CENTER>
+
+We have presented in a united framework a set of
+fairly portable tools for hypothetical
+reasoning in logic programming languages and used
+them to specify
+some previously known
+techniques, such as Extended DCGs, which have been
+described in the past only by their implementation.
+<DD>
+Our WAM-level description of multi-stream 
+logic grammars (HAGs) <A HREF="#f11">[FTD95]</A> which give
+EDCG functionality without a preprocessor
+can be easily replicated in any Prolog system.
+This suggests %the fact
+that the current, preprocessing based
+DCG grammar implementation may become
+obsolete and should not be standardized
+as part of ISO-Prolog.
+Based on restricted but powerful special cases of
+implicitly quantified
+implication (intuitionistic and linear)
+and their continuation passing instances,
+we have shown that virtually all
+programming techniques involving
+backtrackable state information
+can be handled elegantly
+in our framework, with efficient implementation
+possible for some of its frequently used instances.
+
+<P>
+<HR SIZE=4>
+
+<CENTER>
+<B><a name="REFS">
+<H3><FONT SIZE=+2>R</FONT>EFERENCES</H3></B>
+</CENTER>
+
+<P>
+<DL>
+<DT>
+<B><a name="f1">[AKP91]</B> Hassan Ait-Kaci and Andreas Podelski.
+<DD>Towards a meaning of LIFE. In Jan Maluszynski and Martin Wirsing, editors, <I>Proceedings of the 3rd International Symposium on 
+Programming Language Implementation and Logic Programming (Passau, Germany)</I>, pages 255--274. Springer-Verlag, LNCS 528, August 1991.
+
+
+
+<P>
+<DT>
+<B><a name="f2">[AKP93]</B>  Hassan Ait-Kaci and A. Podelski.
+<DD>Towards a meaning of LIFE.<I>Journal of Logic Programming</I>, 16(3/4):195, 1993.
+
+<P>
+<DT>
+<B><a name="f3">[AP90]</B> J.-M. Andreoli and R. Pareschi.
+<DD>Linear objects: Logical processes with built-in inheritance.
+In D.H.D. Warren and P.Szeredi, editors,<I>7th Int. Conf. Logic
+Programming</I>, Jerusalem, Israel, 1990. MIT Press.
+
+<P>
+<DT>
+<B><a name="f4">[Bak92]</B>  H. Baker.
+<DD>Lively linear lisp--'look ma, no garbage!'.
+<I>ACM Sigplan Notices</I>, 27(8):89--98, August 1992.
+
+<P>
+<DT>
+<B><a name="f5">[BR92]</B> P. Brisset and O. Ridoux.
+<DD>The architecture of an implementation of \lambdaProlog: Prolog/Mali.
+<I>Workshop on \lambdaProlog</I>, Philadelphia, PA, USA, 1992.
+ftp://ftp.irisa.fr/local/lande.
+
+<P>
+<DT>
+<B><a name="f6">[BR93]</B>  P. Brisset and O. Ridoux.
+<DD>Continuations in \lambdaProlog.
+In D.S. Warren, editor, <I>10th Int. Conf. Logic Programming</I>,
+pages 27--43, Budapest, Hungary, 1993. ftp://ftp.irisa.fr/local/lande.
+
+<P>
+<DT>
+<B><a name="f7">[CG89]</B>  N. Carriero and D. Gelernter.
+<DD>Linda in context. <I>CACM</I>, 32(4):444--458, 1989.
+
+<P>
+<DT>
+<B><a name="f8">[DBT93]</B>  K. De Bosschere and P. Tarau.
+<DD>Blackboard Communication in Logic Programming.
+<I>Proceedings of the PARCO'93 Conference</I>, Grenoble, France,
+September 1993.
+
+<P>
+<DT>
+<B><a name="f9">[DTH94]</B>  V. Dahl, P. Tarau, and Y. N. Huang.
+<DD>Datalog Grammars. In <I>Proc. 1994 Joint Conference on Declarative Programming</I>, pages 268--282, Peniscola, Spain, September 1994.
+
+<P>
+<DT>
+<B><a name="f10">[DTMP95]</B> V. Dahl, P. Tarau, L. Moreno, and M. Palomar.
+<DD><UL>Treating Coordination with Datalog Grammars.
+In <I>Proceedings of the Joint COMPULOGNET/ELSNET/EAGLES Workshop
+on Computational Logic For Natural Language Processing</I>, April 1995.</UL>
+
+
+<P>
+<DT>
+<B><a name="f11">[FTD95]</B>  Andrew Fall, Paul Tarau, and Veronica Dahl.
+<DD>Natural Language Processing with Hypothetical Assumption
+ Grammars and Sparse Term Taxonomies.
+Technical Report 95-3, Departement d'Informatique, Universite de Moncton, April 1995. Available by ftp from <I>clement.info.umoncton.ca</I>.
+
+<P>
+<DT>
+<B><a name="f12">[Gir87]</B>  J.-Y. Girard.
+<DD>Linear logic. <I>Theoretical Computer Science</I>, (50):1--102, 1987.
+
+<P>
+<DT>
+<B><a name="f13">[HM91]</B>  J.S. Hodas and D.A. Miller.
+<DD>Logic programming in a fragment of intuitionistic linear logic.
+In G. Kahn, editor, <I>Symp. Logic in Computer Science</I>,
+ pages 32--42, Amsterdam, The Netherlands, 1991.
+
+<P>
+<DT>
+<B><a name="f14">[Hod92]</B>  J. Hodas.
+<DD>Specifying Filler-Gap Dependency Parsers in a Linear-Logic Programming Language.
+In Krzysztof Apt, editor, <I>Logic Programming Proceedings of
+the Joint International Conference and Symposium on Logic
+programming</I>, pages 622--636, Cambridge, Massachusetts London, England, 1992. MIT Press.
+
+<P>
+<DT>
+<B><a name="f15">[Hod93]</B>  J.S. Hodas.
+<DD>Logic programming in intuitionistic linear logic.
+Phd. thesis, University of Pennsylvania, Department of Computer and
+Information Science, 1993.
+
+<P>
+<DT>
+<B><a name="f16">[Mil89a]</B>  D.A. Miller.
+<DD>Lexical scoping as universal quantification.
+In Giorgio Levi and Maurizio Martelli, editors, <I>Proceedings of
+the Sixth International Conference on Logic Programming</I>, 
+pages 268--283, Cambridge, Massachusetts London, England, 1989. 
+MIT Press.
+
+<P>
+<DT>
+<B><a name="f17">[Mil89b]</b>  D.A. Miller.
+<DD>A logical analysis of modules in logic programming.
+<I>J. Logic Programming</I>, 6(1--2):79--108, 1989.
+
+<P>
+<DT>
+<B><a name="f18">[Mil91a]</B>  D.A. Miller.
+<DD>A logic programming language with lambda-abstraction, function
+variables, and simple unification.
+<I>J. Logic and Computation</I>, 1(4):497--536, 1991.
+
+<P>
+<DT>
+<B><a name="f19">[Mil91b]</B>  D.A. Miller.
+<DD>Unification of simply typed lambda-terms as logic programming.
+In K. Furukawa, editor, <I>8th Int. Conf. Logic Programming</I>,
+ pages 255--269, Paris, France, 1991. MIT Press.
+
+<P>
+<DT>
+<B><a name="f20">[MN86]</B>  D. Miller and G. Nadathur.
+<DD>Some uses of higher-order logic in computational linguistics.
+In <I>24st Annual Meeting of the Association for Computational
+Linguistics</I>, pages 247--255, 1986.
+
+<P>
+<DT>
+<B><a name="f21">[MNPS91]</B>  D.A. Miller, G. Nadathur, F. Pfenning, and A. Scedrov.
+<DD>Uniform proofs as a foundation for logic programming.
+<I>Annals of Pure and Applied Logic</I>, (51):125--157, 1991.
+
+<P>
+<DT>
+<B><a name="f22">[Tar95]</B>  Paul Tarau.
+<DD>BinProlog 3.30 User Guide.
+Technical Report 95-1, Departement d'Informatique, Universite de Moncton, February 1995. Available by ftp from <I>clement.info.umoncton.ca</I>.
+
+<P>
+<DT>
+<B><a name="f23">[TB89]</B>  Paul Tarau and Michel Boyer.
+<DD>Prolog Meta-Programming with Soft Databases.
+In Harvey Abramson and M.H. Rogers, editors, <I>Meta-Programming in
+Logic Programming</I>, pages 365--382. MIT Press, 1989.
+
+<P>
+<DT>
+<B><a name="f24">[TD94]</B>  Paul Tarau and Veronica Dahl.
+<DD>Programming and Logic Grammars with First-order Continuations.
+In <I>Proceedings of LOPSTR'94</I>, Pisa, June 1994.
+
+<P>
+<DT>
+<B><a name="f25">[TDF95]</B>  Paul Tarau, Veronica Dahl, and Andrew Fall.
+<DD>Backtrackable State with Linear Assumptions, Continuations
+ and Hidden Accumulator Grammars.
+Technical Report 95-2, Departement d'Informatique, Universite
+de Moncton, April 1995.
+ Available by ftp from <I>clement.info.umoncton.ca</I>.
+
+<P>
+<DT>
+<B><a name="f26">[Van89]</B>  Peter Van Roy.
+<DD>A useful extension to Prolog's Definite Clause Grammar notation.
+<I>SIGPLAN notices</I>, 24(11):132--134, November 1989.
+
+<P>
+<DT>
+<B><a name="f27">[Wad91]</B>  P. Wadler.
+<DD>Is there a use for linear logic?
+<I>ACM/IFIP PEPM Symposium</I>, June 1991.
+
+<P>
+<DT>
+<B><a name="f28">[Wad93]</B>  Philip Wadler.
+<DD>Monads and composable continuations. 
+<I>Lisp and Symbolic Computation</I>, pages 1--17, 1993.
+</DL>
+
+<P>
+<HR SIZE=4>
+
+<P>
+<DD>
+<h5><B><a name="footnote1">(1)</B>
+For instance <i>uniform proofs</i> <A HREF="#f21">[MNPS91]</A></h5>
+
+<P>
+<DD>
+<h5><B><a name="footnote2">(2)</B>
+We refer to <A HREF="#f11">[FTD95]</A> for the applications of our techniques to natural language processing.</h5>
+
+<P>
+<DD>
+<h5><B><a name="footnote3">(3)</B>
+This is different from what's happening
+in functional languages like Haskell where, in a deterministic (although lazy evaluation enabled)
+framework, elegant unified solutions have been described in terms of monads and continuations,
+and `imperative functional programming' is used (with relative impunity) for arrays,
+ I/O processing, etc.</h5>
+
+<P>
+<DD>
+<h5><B><a name="footnote4">(4)</B>
+See the actual implementation
+in file extra.pl of the BinProlog 3.30 distribution, <A HREF="#f22">[Tar95]</A>.</h5>
+
+<P>
+<DD>
+<h5><B><a name="footnote5">(5)</B> 
+The use of <b> -:</b> instead of the usual <b>-o</b>
+comes from the fact that in Prolog, an operator mixing alphabetic and
+special caracters would require quoting in infix position. Also, since our implication differs semantically from usual linear implication, it is reasonable to denote it differently.</h5>
+
+<P>
+<DD>
+<h5><B><a name="footnote6">(6)</B>
+Inefficiency comes from the fact that it would imply dispatching
+and interpreting the current continuation. Even on systems like BinProlog where the  current continuation is a first class object, 
+it would incur unnecessary overhead to 'un-binarize' it, i.e.
+to undo the effect of BinProlog's preprocessing transformation.</h5>
+
+<P>
+<DD>
+<h5><B><a name="footnote7">(7)</B>
+This is not strictly needed for implementation reasons, (copying on use would suffice) as the backtrackable nature of intuitionistic implications ensures that their assumptions can be safely heap-represented. Exploring implicitly existentially quantified intuitionistic assumptions is still an interesting alternative.</h5>
+
+<P>
+<DD>
+<h5><B><a name="footnote8">(8)</B>
+This should not be confused with the `new constant' based implementation of universal quantifiers
+in \lambdaProlog <A HREF="#f18">[Mil91a]</A>,<A HREF="#f19">[Mil91b]</A>.</h5>
+
+<P>
+<DD>
+<h5><B><a name="footnote9">(9)</B>
+See file <b> extra.pl</b> of the distribution on <i>clement.info.umoncton.ca.</i></h5>
+
+<P>
+<DD>
+<h5><B><a name="footnote10">(10)</B>
+Which, unfortunately, is NP-complete. This is another reason why we have chosen
+ to leave to the programmer the task to enforce <i>weakening</i> only when really needed.</h5>
+
+<P>
+<DD>
+<h5><B><a name="footnote11">(11)</B>
+More precisely 2-keyed hashing based
+global `properties'.</h5>
+
+<P>
+<DD>
+<h5><B><a name="footnote12">(12)</B>
+Value-trailing consists in pushing both the address of the variable and its value on the trail.</h5>
+
+<P>
+<DD>
+<h5><B><a name="footnote13">(13)</B>
+which is, by the way, a motivating example also for Andreoli and Pareschi's Linear Objects, <A HREF="#f3">[AP90]</A>.</h5>
+
+<P>
+<DD>
+<h5><B><a name="footnote14">(14)</B>
+For instance, in the case of <b> phrase</b>, Prolog's DCGs would require
+on-the-fly preprocessing for meta-interpretation.</h5>
+
+

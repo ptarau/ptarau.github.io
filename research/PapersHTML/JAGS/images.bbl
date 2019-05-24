@@ -1,0 +1,238 @@
+\begin{thebibliography}{10}
+
+\bibitem{andreoli:linear:iclp:90}
+J.-M. Andreoli and R.~Pareschi.
+\newblock Linear objects: Logical processes with built-in inheritance.
+\newblock In D.H.D. Warren and P.~Szeredi, editors, {\em 7th Int. Conf. Logic
+  Programming}, Jerusalem, Israel, 1990. MIT Press.
+
+\bibitem{Asher93}
+N.~Asher.
+\newblock {\em Reference to Abstract Objects in Discourse}, volume~50 of {\em
+  Studies in Linguistics and Philosophy}.
+\newblock Kluwer, 1993.
+
+\bibitem{baker92}
+H.~Baker.
+\newblock Lively linear lisp--'look ma, no garbage!'.
+\newblock {\em ACM Sigplan Notices}, 27(8):89--98, August 1992.
+
+\bibitem{Bates78}
+M.~Bates.
+\newblock The theory and practice of augmented transition network grammars.
+\newblock In {\em Natural Language Communication with Computers, Bole, L.
+  (ed)}, pages 191--259, 1978.
+
+\bibitem{chom82}
+N.~Chomsky.
+\newblock Lecture notes on government and binding, the pisa lectures, 2nd
+  (revised) ed.
+\newblock {\em Foris Publications}, 1982.
+
+\bibitem{COL78}
+A.~Colmerauer.
+\newblock Metamorphosis grammars.
+\newblock In {\em Lecture Notes in Computer Science}, New York, N. Y., 1978.
+  Springer-Verlag.
+
+\bibitem{Dahl89}
+V.~Dahl.
+\newblock Discontinuous grammars.
+\newblock {\em Computational Intelligence}, 5:161--179, 1989.
+
+\bibitem{Dahl:McCord}
+V.~Dahl and M.~McCord.
+\newblock Treating coordination in logic grammars.
+\newblock In {\em American Journal of Computational Linguistics 9}, pages
+  69--91, 1983.
+
+\bibitem{DahlT95a}
+V.~Dahl, P.~Tarau, and J.~Andrews.
+\newblock Extending {D}atalog {G}rammars.
+\newblock In {\em Proc. of NLDB'95, Paris}, May 1995.
+
+\bibitem{DTN:Gulp94}
+V.~Dahl, P.~Tarau, and Y.~N. Huang.
+\newblock Datalog {G}rammars.
+\newblock In {\em Proc. 1994 Joint Conference on Declarative Programming},
+  pages 268--282, Peniscola, Spain, September 1994.
+
+\bibitem{DT97:AGNL}
+Veronica Dahl, Paul Tarau, and Renwei Li.
+\newblock Assumption {G}rammars for {P}rocessing {N}atural {L}anguage.
+\newblock In Lee Naish, editor, {\em Proceedings of the Fourteenth
+  International Conference on Logic Programming}, pages 256--270, MIT press,
+  1997.
+
+\bibitem{Fall95b}
+A.~Fall, V.~Dahl, and P.~Tarau.
+\newblock Resolving co-specification in contexts.
+\newblock In {\em Proc. of IJCAI Workshop on Context in Natural Language
+  Processing}, Montreal, Canada, 1995.
+
+\bibitem{Fall95:Context}
+Andrew Fall, Veronica Dahl, and Paul Tarau.
+\newblock Resolving {C}o-specification in {C}ontexts.
+\newblock In {\em Proc. of IJCAI'95 Context in Natural Language Workshop},
+  August 1995.
+
+\bibitem{girard:linear:tcs:87}
+J.-Y. Girard.
+\newblock Linear logic.
+\newblock {\em Theoretical Computer Science}, (50):1--102, 1987.
+
+\bibitem{Grove94}
+C.~Grover, C.~Brew, S.~Manandhar, and M.~Moens.
+\newblock Priority union and generalization in discourse grammars.
+\newblock In {\em Proc. 32nd ACL Conference}, New Mexico, 1994.
+
+\bibitem{Hale83}
+K.~Hale.
+\newblock Walpiri and the grammar of non-configurational languages.
+\newblock In {\em Natural Language and Linguistic Theory 1}, pages 5--47, 1983.
+
+\bibitem{Hodas92}
+J.~Hodas.
+\newblock {S}pecifying {F}iller-{G}ap {D}ependency {P}arsers in a
+  {L}inear-{L}ogic {P}rogramming {L}anguage.
+\newblock In Krzysztof Apt, editor, {\em {L}ogic {P}rogramming {P}roceedings of
+  the {J}oint {I}nternational {C}onference and {S}ymposium on {L}ogic
+  programming}, pages 622--636, Cambridge, Massachusetts London, England, 1992.
+  MIT Press.
+
+\bibitem{hodas:thesis}
+Joshua~S. Hodas.
+\newblock {\em Logic Programming in Intuitionistic Linear Logic: Theory,
+  Design, and Implementation}.
+\newblock PhD thesis, University of Pennsylvania, Department of Computer and
+  Information Science, May 1994.
+\newblock Available as University of Pennsylvania Technical Reports
+  MS-CIS-92-28 or LINC LAB 269.
+
+\bibitem{hodmil:ic94}
+Joshua~S. Hodas and Dale Miller.
+\newblock Logic {P}rogramming in a {F}ragment of {I}ntuitionistic {L}inear
+  logic.
+\newblock {\em Journal of Information and Computation}, 110(2):327--365, May
+  1994.
+
+\bibitem{Hoji85}
+H.~Hoji.
+\newblock Logical form constraints and configurational structures in japanese,
+  ph.d. thesis.
+\newblock In {\em Univ. of Washington}, 1985.
+
+\bibitem{Kashket86}
+M.B. Kashket.
+\newblock Parsing of free-word order language: Walpiri.
+\newblock In {\em Proc. of 24th Annual Meetings of the Association for
+  Computational Linguistics}, 1986.
+
+\bibitem{Kopylov95}
+A.~P. Kopylov.
+\newblock Decidability of linear affine logic.
+\newblock In {\em Proceedings, Tenth Annual IEEE Symposium on Logic in Computer
+  Science}, pages 496--504, San Diego, California, 26--29 June 1995. IEEE
+  Computer Society Press.
+
+\bibitem{DSP91}
+S.~Shieber M.~Darlymple and F.~Pereira.
+\newblock Ellipsis and higher-order unification.
+\newblock {\em Linguistics and Philosophy}, 14(4):399--452, 1991.
+
+\bibitem{P81}
+F.~Pereira.
+\newblock Extraposition grammars.
+\newblock {\em American Journal for Computational Linguistics}, 7:243--256,
+  1981.
+
+\bibitem{Ross67}
+J.R. Ross.
+\newblock Constraints on variables and syntax.
+\newblock {\em Ph.D. Thesis, MIT}, 1967.
+
+\bibitem{Saito85}
+M.~Saito.
+\newblock Some asymetries in japanese and their theoretical implications, ph.d.
+  thesis.
+\newblock In {\em MIT}, 1985.
+
+\bibitem{SleatorCMU91}
+Daniel D.~K. Seator and Davy Temperley.
+\newblock Parsing {E}nglish with a {L}ink {G}rammar.
+\newblock Technical report, 1991.
+\newblock CMU-CS-91-196.
+
+\bibitem{Sidner81}
+C.~Sidner.
+\newblock Focussing for {I}nterpretation of {P}ronouns.
+\newblock {\em American Journal for Computational Linguistics}, 7(4):217--231,
+  1981.
+
+\bibitem{tanaka93}
+Takushi Tanaka.
+\newblock Parsing electronic circuits in a logic grammar.
+\newblock {\em IEEE-Trans, Knowledge and Data-Eng.}, 5(2):229--239, 1993.
+
+\bibitem{Tarau97:BinProlog}
+Paul Tarau.
+\newblock Bin{P}rolog 5.75 {U}ser {G}uide.
+\newblock Technical Report 97-1, D\'{e}partement d'Informatique, Universit\'{e}
+  de Moncton, April 1997.
+\newblock Available from {\em http://clement.info.umoncton.ca/BinProlog}.
+
+\bibitem{Tarau89:Soft}
+Paul Tarau and Michel Boyer.
+\newblock {P}rolog {M}eta-{P}rogramming with {S}oft {D}atabases.
+\newblock In Harvey Abramson and M.H. Rogers, editors, {\em Meta-Programming in
+  Logic Programming}, pages 365--382. MIT Press, 1989.
+
+\bibitem{TDF95a}
+Paul Tarau, Veronica Dahl, and Andrew Fall.
+\newblock Backtrackable {S}tate with {L}inear {A}ssumptions, {C}ontinuations
+  and {H}idden {A}ccumulator {G}rammars.
+\newblock Technical Report 95-2, D\'{e}partement d'Informatique, Universit\'{e}
+  de Moncton, April 1995.
+\newblock Available by ftp from {\em clement.info.umoncton.ca}.
+
+\bibitem{TDF:asian96}
+Paul Tarau, Veronica Dahl, and Andrew Fall.
+\newblock Backtrackable {S}tate with {L}inear {A}ffine {I}mplication and
+  {A}ssumption {G}rammars.
+\newblock In Joxan Jaffar and Roland~H.C. Yap, editors, {\em Concurrency and
+  Parallelism, Programming, Networking, and Security}, Lecture Notes in
+  Computer Science 1179, pages 53--64, Singapore, December 1996. Springer.
+
+\bibitem{edcg}
+Peter {Van Roy}.
+\newblock A useful extension to {Prolog}'s {Definite Clause Grammar} notation.
+\newblock {\em SIGPLAN notices}, 24(11):132--134, November 1989.
+
+\bibitem{wadler:lin:91}
+P.~Wadler.
+\newblock Is there a use for linear logic?
+\newblock {\em ACM/IFIP PEPM Symposium}, June 1991.
+
+\bibitem{wadler92:acm}
+Philip Wadler.
+\newblock The essence of functional programming.
+\newblock In {\em ACM Symposium POPL'92}, pages 1--15. ACM Press, 1992.
+
+\bibitem{Whitman82}
+J.~Whitman.
+\newblock Configurational parameters.
+\newblock In {\em Harvard University Manuscript, Cambridge, MA}, 1982.
+
+\bibitem{whilps95}
+Michael Winikoff and James Harland.
+\newblock Implementing the linear logic programming language {L}ygon.
+\newblock In John Lloyd, editor, {\em International Logic Programming
+  Symposium}, pages 66--80, Portland, Oregon, December 1995. MIT Press.
+
+\bibitem{Woods73}
+W.A. Woods.
+\newblock An experimental parsing system for transition network grammars.
+\newblock In {\em Natural Language Processing, Rustin R. (ed.)}, pages
+  145--149, 1973.
+
+\end{thebibliography}

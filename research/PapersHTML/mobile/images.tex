@@ -1,0 +1,150 @@
+\batchmode
+% URL: http://clement.info.umoncton.ca/html/remote/art.html
+
+
+
+
+
+
+\documentstyle[epsf,times,twoside,jlp]{article}
+\makeatletter
+
+\def\koen#1{\marginpar{\small{\bf koen:} #1}}
+
+\def\stephen#1{\marginpar{\small{\bf stephen:} #1}}
+
+\def\paul#1{\marginpar{\small{\bf paul:} #1}}
+
+\def\veronica#1{\marginpar{\small{\bf veronica:} #1}}
+
+\newcommand {\FIG}[4]{
+\begin{figure}[htbp]
+\begin{center}
+\leavevmode
+{ \setlength{\epsfysize}{#2 in} \setlength{\epsfxsize}{#3 in} 
+  \epsffile{#1.eps}
+}
+\end{center}
+\caption{#4}\label{#1}
+\end{figure}
+}
+
+\newcommand {\seq}[2]{{#1} \vdash {#2}}
+
+\newcommand {\sseq}[3]{{#1};{#2} \vdash {#3}}
+
+\newcommand {\regle}[3]{
+\begin{tabular}[b]{c}
+#1\\ 
+\hline
+#2\\ 
+\end{tabular}\,\,\raisebox{1.5ex}{$#3$}
+}
+
+\newcommand {\split}[4]{
+\begin{tabular}[b]{c}
+\begin{tabular}[b]{c}
+#1
+\end{tabular}
+\begin{tabular}[b]{c}
+#2
+\end{tabular}\\ 
+\hline
+#3\\ 
+\end{tabular}\,\,\raisebox{1.5ex}{$#4$}
+}
+
+\newcommand {\Regle}[3]{
+#1
+$\overline{\mbox{#2}}^{\,#3}$\\ 
+}
+
+\newcommand {\FirstRegle}[3]{
+\begin{tabular}[b]{c}
+#1
+$\overline{\mbox{#2}}^{\, #3}$\\ 
+\end{tabular}
+}
+
+\newcommand {\FirstSplit}[4]{
+\begin{tabular}[b]{c}
+\begin{tabular}[b]{c}
+#1
+\end{tabular}
+\begin{tabular}[b]{c}
+#2
+\end{tabular}\\ 
+$\overline{\mbox{#3}}^{\, #4}$\\ 
+\end{tabular}
+}
+
+\newcommand {\Split}[4]{
+\begin{tabular}[b]{c}
+#1
+\end{tabular}
+\begin{tabular}[b]{c}
+#2
+\end{tabular}\\ 
+$\overline{\mbox{#3}}^{\, #4}$\\ 
+}
+
+\def\paul#1{}
+
+\def\veronica#1{}
+
+\def\koen#1{}
+
+\def\smalltt{\small\tt}
+
+\makeatother
+\newenvironment{tex2html_wrap}{}{}
+\newwrite\lthtmlwrite
+\def\lthtmltypeout#1{{\let\protect\string\immediate\write\lthtmlwrite{#1}}}%
+\newbox\sizebox
+\begin{document}
+\pagestyle{empty}
+\stepcounter{section}
+{\newpage
+\clearpage
+\samepage \begin{figure}[htbp]
+\begin{center}
+\leavevmode
+{ \setlength{\epsfysize}{2.5 in} \setlength{\epsfxsize}{4 in} 
+\epsffile{linda.eps}
+}
+\end{center}
+\label{linda}
+\end{figure}
+}
+
+\stepcounter{section}
+\stepcounter{section}
+{\newpage
+\clearpage
+\samepage \begin{figure}[htbp]
+\begin{center}
+\leavevmode
+{ \setlength{\epsfysize}{2.5 in} \setlength{\epsfxsize}{4 in} 
+\epsffile{master.eps}
+}
+\end{center}
+\label{master}
+\end{figure}
+}
+
+\stepcounter{subsection}
+\stepcounter{subsection}
+\stepcounter{section}
+\stepcounter{subsection}
+\stepcounter{subsection}
+\stepcounter{subsection}
+\stepcounter{section}
+\stepcounter{section}
+\stepcounter{subsection}
+\stepcounter{subsection}
+\stepcounter{subsection}
+\stepcounter{subsection}
+\stepcounter{section}
+\stepcounter{section}
+
+\end{document}

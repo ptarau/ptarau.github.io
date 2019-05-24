@@ -1,0 +1,1352 @@
+<TITLE>Monadic Constructs for Logic Programming</TITLE>
+
+<CENTER>
+<H2>
+<FONT SIZE=+3>M</FONT>ONADIC
+<FONT SIZE=+3>C</FONT>ONSTRUCTS
+<FONT SIZE=+3>F</FONT>OR<BR>
+<FONT SIZE=+3>L</FONT>OGIC
+<FONT SIZE=+3>P</FONT>ROGRAMMING
+</H2>
+</CENTER>
+
+<pre>
+<A HREF="http://www.bekkers.fr/Yves/home.HTM">
+Yves Bekkers </A>
+Universit'e de Rennes I and IRISA/INRIA Rennes,
+<i>bekkers@irisa.fr</i>
+<A HREF="http://www.sciences.umoncton.ca/infoque/PAULT.HTM">
+Paul Tarau </A>
+D'epartement d'Informatique,
+Universit'e de Moncton, 
+<i>tarau@info.umoncton.ca</i>
+</pre>
+
+<HR>
+<center>
+<b>Abstract</b>
+</center>
+<UL>
+<DD>We describe a variety of logic programming
+constructs in terms of monads and monad morphisms
+and a reconstruction of all-solution predicates
+in terms of list comprehensions in \lambdaProlog. 
+Novel monad structures are described for lazy function lists,
+clause unfoldings and a monad morphism
+based embedding of Prolog in \lambdaProlog is given.
+Not limited to \lambdaProlog, most of our techniques
+are usable in logic programming languages which
+implement a <b>call/N</b> built-in.
+<dd>
+<b>Keywords:</b> 
+<i>logic and functional programming, monads, monad morphisms, 
+list comprehensions,  all solution predicates, meta-programming,
+unfolding, higher-order unification, lazy function lists, 
+\lambdaProlog.</i>
+</UL>
+
+<P>
+<HR SIZE=4>
+
+<UL>
+<LI><A HREF="#INTRO">Introduction</A>
+<LI><A HREF="#DATASTRUCT">Monads for Elementary Data Structures</A>
+  <UL>
+  <LI><A HREF="#LIST-MONAD">The List-Monad in \lambdaProlog</A>
+  <LI><A HREF="#FUNC-LIST">The Monad of Lazy Function-Lists in \lambdaProlog</A>
+  <LI><A HREF="#ELEMONAD">Other Elementary Monads</A>  
+    <UL>
+    <LI><A HREF="#SEQMONAD">Constructor Sequence Monads</A>
+    <LI><A HREF="#DIFFLISTS">The Monad of Difference Lists</A>    
+    </UL>
+  <LI><A HREF="#MORPHI">Monad Morphisms</A>
+  </UL>
+<LI><A HREF="#METAMONAD">Metaprogramming with Monads</A>
+  <UL>
+  <LI><A HREF="#PROGCLAUS">Programs as Monads of Clauses</A>
+  <LI><A HREF="#EMBPROLOG">An Embedding of Prolog in \lambdaProlog</A> 
+  </UL>
+<LI><A HREF="#COMPREHENS">List Comprehensions with Monads</A>
+  <UL>
+  <LI><A HREF="#CONCRENOTA">
+                Concrete Notation for List Comprehension in \lambdaProlog</A>
+    <UL>
+    <LI><A HREF="#USLIST">Using list comprehensions</A> 
+    </UL>
+  </UL>
+<LI><A HREF="#SOLPREDICA">
+              Monad-Based Comprehensions VS. All-Solution Predicates</A>
+  <UL>
+  <LI><A HREF="#EXPRESOPERA">
+       Expressing Monad Operations in Terms of All-Solution Predicates</A>
+  <LI><A HREF="#BAGOF">Defining List Comprehensions with Bagof</A> 
+  </UL>
+<LI><A HREF="#RELWORK">Related Work</A>
+<LI><A HREF="#FUTURE">Future Work</A>
+<LI><A HREF="#CONCLU">Conclusion</A>
+<LI><A HREF="#ACKNOWLEDGS">Acknowledgments</A>
+<LI><A HREF="#REFS">References</A>
+</UL>
+
+<P>
+<HR SIZE=4>
+
+<CENTER>
+<B><a name="INTRO">
+<H3><FONT SIZE=+2>I</FONT>NTRODUCTION</H3></B>
+</CENTER>
+
+We suppose the reader is familiar with both major
+declarative programming paradigms and has basic concepts about
+monads <A HREF="#f18">[wadler92:acm]</A> and higher-order
+logic programming languages of the \lambdaProlog family 
+<A HREF="#f11">[nadathur:overview:slp:88]</A>,
+<A HREF="#f6">[miller:logic:jlc:91]</A>.
+
+<dd>Monads and comprehensions, have been successfully used in functional
+programming as a convenient generalization of various structurally similar
+programming constructs starting with simple ones like list processing
+and ending with intricate ones like CPS transformations and state
+transformers.
+<dd>
+Intuitively, a monad can be seen as a generalization of
+the usual processing of data structures with an associative
+operation like the well-known <b>append/3</b> 
+list operation in Prolog<A HREF="#footnote1">(1)</A> We refer to the work of Philip Wadler
+<A HREF="f17">[wadler:comprehending:lfp:90]</A>,  <A HREF="#f18">[wadler92:acm]</A> for formal definition 
+and a long list of powerful examples, and  to Moggi <A HREF="#f9">[Moggi:monads]</A>
+for the categorist sources of the concept of monad.
+<dd>
+All-solution predicates are the logic programming siblings of list
+comprehensions in functional programming languages.
+<dd>
+Let us point out an interesting (although possibly episodical)
+parallel between these two programming paradigms.
+When doubts have been raised by Goguen's thesis <A HREF="#f5">[Goguen88]</A>
+on the usefulness of higher order constructs for functional programming,
+this seemed <i>deja vu</i> for logic programmers familiar with 
+Warren's paper <A HREF="#f19">[Warren82]</A>.
+After emulating some basic \lambda-calculus constructs in terms of
+first-order Horn-clause logic (i.e. what is also known as pure Prolog)
+Warren has shown that most of the expressiveness of higher-order
+constructs can be emulated in first order logic programming.
+<dd>
+All-solution predicates have been recognized
+by Warren as a notable exception and have
+been present in logic programming ever since.
+<dd>
+Interestingly enough, the idea of the intrinsic usefulness of
+higher-order constructs seems to be back again
+in the functional programming community
+after the proof of expressiveness
+of some essentially high-order monad constructs
+(used for instance in describing state transformers and constant
+time array operations) in the papers of Philip Wadler.
+<dd>
+Post-Prolog generation logic programming languages like
+\lambdaProlog make essential use of high-order unification
+and quantification to help the programmer
+specify the intended meaning of complex operations.
+<dd>
+We will propose in this paper a  `monad-based' approach to 
+the definition of all-solution predicates in 
+\lambdaProlog <A HREF="#f10">[nadathur:overview:slp:88]</A>. As a follow-up,
+we obtain a clarification of Prolog's high-order operators
+and their similarities and differences with monad comprehensions 
+in functional languages.
+<dd>
+More generally, we will see various program transformations  
+as morphisms between suitably defined monads and hint to
+some of their practical uses in compilation.
+<dd>
+Novel monad structures are described for lazy function-lists,
+clause unfoldings and a monad morphism
+based embedding of an Prolog in \lambdaProlog is given.
+<dd>
+In the examples that follow we will not limit ourselves to
+Prolog but refer most of the time to its more powerful
+<i>superset</i> \lambdaProlog 
+ <A HREF="#f6">[miller:logic:jlc:91]</A>, 
+<A HREF="#f7">[miller:unification:iclp:91]</A>,
+ <A HREF="#f13">[nadathur:representation:lfp:90]</A>, <A HREF="#f12">[nadathur:higherorder:jacm:90]</A>
+(in its \lambdaProlog-Mali incarnation
+<A HREF="#f4">[brisset:architecture:lpw:92]</A>, 
+<A HREF="#f2">[bekkers:mali:slp:86]</A>,
+which has been used to run the programming examples).
+<dd>
+The paper is organized as follows:
+we start by describing some monads for elementary data structures the
+(lists, lazy function-lists etc.) and monad morphisms.
+Then we deal with metaprogramming with monads; after
+describing programs as monads of clauses, we give
+an embedding of Prolog in \lambdaProlog.
+Finally, we describe how to implement
+list comprehensions with monads, how to
+express monad operations in terms of all-solution predicates
+and the reverse process of defining list comprehensions 
+in terms of <b>bagof</b>. We conclude with the usual future work and
+conclusion sections.
+
+<P>
+<HR SIZE=4>
+
+<CENTER>
+<B><a name="DATASTRUCT">
+<H3><FONT SIZE=+2>M</FONT>ONADS
+<FONT SIZE=+2>for</FONT> <FONT SIZE=+2>E</FONT>LEMENTARY
+<FONT SIZE=+2>D</FONT>ATA <FONT SIZE=+2>S</FONT>TRUCTURES</H3></B>
+</CENTER>
+
+<P>
+<HR SIZE=4>
+
+<B><a name="LIST-MONAD">
+<H4><FONT SIZE=+1>T</FONT>HE 
+<FONT SIZE=+1>L</FONT>IST-<FONT SIZE=+1>M</FONT>ONAD
+<FONT SIZE=+1>in</FONT> 
+<FONT SIZE=+1>\L</FONT>AMBDA<FONT SIZE=+1>P</FONT>ROLOG</H4></B>
+
+We will start with a definition of the list monad
+in \lambdaProlog.  Note that \lambdaProlog.
+ is a language with polymorphic types,
+and with lambda terms manipulated through high-order unification.
+Let us stress from the start that terms are mostly used as
+data structures and that <i>\lambdaProlog is not a mixture of 
+orthogonal functional and logic programming languages</i>
+but a natural extension of Horn clause logic based on the concept
+of <i>uniform proof</i> <A HREF="#f8">[miller:hereditary:lics:87]</A>.
+<dd>
+However we will not use in this case any of the quantification
+related features of \lambdaProlog so that the code will
+run with minor modifications on any Prolog system 
+(for example  <A HREF="#f14">[Tarau95:BinProlog]</A>) having
+the <b>call/N</b> primitive introduced by 
+<A HREF="#f10">[mycroft:poli]</A>.
+
+<TABLE BORDER=1 CELLPADDING=10>
+<TR ALIGN=CENTER><TH ALIGN=left>
+<pre>
+% primitive operations                                             
+
+% maps a single element of A to an object of the monad             
+type unitList A -> (list A) -> o.                                  
+unitList X [X].                                                    
+
+% applies to a list an operation from elements to lists            
+% to obtain a new list                                             
+type bindList (list A)-> (A ->(list B)->o)-> (list B)-> o.         
+bindList [] _K [].                                                 
+bindList [X|Xs] K R :-                                             
+   K X Ys,                                                          
+   bindList Xs K Zs,                                                
+   append Ys Zs R.    
+                                              
+</TH>
+</pre>
+</TR>
+</TABLE>
+
+<TABLE BORDER=1 CELLPADDING=0>
+<TR ALIGN=CENTER><TH ALIGN=left>
+<pre>
+
+ % derived operations
+
+ concatenates the elements of a list of lists                       
+ type joinList (list (list A)) -> (list A) -> o
+ joinList Xss Xs :- bindList Xss id Xs.                             
+
+ % applies an operation to each element of a list                   
+ type mapList (A->B->o) -> (list A) -> (list B) -> o.
+ mapList F Xs Ys :- bindList Xs ( compose F unitList) Ys.               
+<P>
+</TH>
+</pre>
+</TR>
+</TABLE>
+
+
+<TABLE BORDER=1 CELLPADDING=0>
+<TR ALIGN=CENTER><TH ALIGN=left>
+<pre>
+
+ %tools                                                             
+                                                                     
+ type id A -> A ->o.                                                
+ id X X.                                                            
+                                                                    
+ % composes two predicates which implement functions                
+ type compose (A->B->o) -> (B->C->o) -> (A->C->o).                  
+ compose F G  X Y :- F X Z, G Z Y.                                  
+                                                                         
+ type dupList A -> (list A) -> o.                                   
+ dupList X [X,X]. 
+<P>                                                
+</TH>
+</pre> 
+</TR>
+</TABLE>
+<P>
+<dd>For instance, the goal <b>bindList [1,2,3] dupList R.</b>
+will instantiate <b>R</b> to <b>[1,1,2,2,3,3]</b>.
+<dd>
+It is easy to verify (and actually programmable in \lambdaProlog)
+that all the monad axioms and properties of <A HREF="#f17">[wadler:comprehending:lfp:90]</A>, 
+<A HREF="#f18">[wadler92:acm]</A>
+hold for our definitions.
+
+<P>
+<HR SIZE=4>
+
+<B><a name="FUNC-LIST">
+<H4><FONT SIZE=+1>T</FONT>HE 
+<FONT SIZE=+1>M</FONT>ONAD
+<FONT SIZE=+1>of</FONT> 
+<FONT SIZE=+1>L</FONT>AZY 
+<FONT SIZE=+1>F</FONT>UNCTION-<FONT SIZE=+1>L</FONT>IST
+<FONT SIZE=+1>in</FONT>
+<FONT SIZE=+1>\L</FONT>AMBDA<FONT SIZE=+1>P</FONT>ROLOG</H4></B>
+
+Lazy function-lists <A HREF="#f3">[brisset:naivereverse:iclp:91]</A>
+ are a surprising
+but natural `difference' data-structure which among other properties allows
+`linear' performance on apparently quadratic predicates like
+the well known `naive reverse' Prolog benchmark 
+<A HREF="#f3">[brisset:naivereverse:iclp:91]</A>. Basically this is achieved by a lazy implementation of \beta reduction. We refer to
+<A HREF="#f3">[brisset:naivereverse:iclp:91]</A> for the
+details of their operational semantics.
+<dd>
+A simple example (which can be seen as a <b>unit</b> operator)
+is <b>x\z\[x|z]</b> which applied to <b>1</b> gives <b>\z[1|z]</b>.
+<dd>
+The following program<A HREF="#footnote2">(2)</A> implements the monad of lazy function-lists.
+
+<TABLE BORDER=1 CELLPADDING=10>
+<TR ALIGN=CENTER><TH ALIGN=left>
+<pre>
+%tools                                                             
+#define flistT(A) ((list A) -> (list A))                           
+#define NIL x\x                                                    
+#define CONS x\l\u\ [x | (l u)]                                    
+#define CONC l1\l2\x\ (l1 (l2 x))                                    
+</TH> 
+</pre>                                               
+</TR>
+</TABLE>
+
+
+<TABLE BORDER=1 CELLPADDING=0>
+<TR ALIGN=CENTER><TH ALIGN=left>
+<pre>
+
+ % primitive monad operations                                       
+ % primitive monad operations                                       
+ unitFlist X (CONS X NIL).                                          
+                                                                     
+ type bindFlist flistT(A)->(A->flistT(B)->o)->flistT(B) -> o.       
+ bindFlist NIL _K NIL.                                              
+ bindFlist (CONS X Xs) K (CONC Ys Zs) :-                            
+    K X Ys,                                                              
+    bindFlist Xs K Zs. 
+                                             
+</TH> 
+</pre>                                               
+</TR>
+</TABLE>
+
+
+<TABLE BORDER=1 CELLPADDING=10>
+<TR ALIGN=CENTER><TH ALIGN=left>
+<pre>
+% derived monad operations                                         
+type joinFlist flistT(flistT(A)) -> flistT(A) -> o.                
+joinFlist Xss Xs :- bindFlist Xss id Xs.                           
+                                                                     
+type mapFlist (A->B->o) -> flistT(A) -> flistT(B) -> o.            
+
+</TH> 
+</pre>                                               
+</TR>
+</TABLE>
+
+<P>
+<HR SIZE=4>
+
+<B><a name="ELEMONAD">
+<H4><FONT SIZE=+1>O</FONT>THER <FONT SIZE=+1>E</FONT>LEMENTARY
+<FONT SIZE=+1>M</FONT>ONADS</H4></B>
+
+<P>
+<HR SIZE=4>
+
+<B><a name="SEQMONAD">
+<B>C<FONT SIZE=-1>ONSTRUCTOR</FONT>
+S<FONT SIZE=-1>EQUENCE</FONT> 
+M<FONT SIZE=-1>ONADS</FONT></B><p></B>
+
+By replacing the list constructor <b>'.'/2</b> and terminator 
+<b>[]/0</b><b> by </b><b>noth</b><b>r pa</b>r we can generalize the list monad
+to a more general `constructor sequence' monad.
+Two widely used instances are:
+<ul>
+<li>the conjunction monad for <b><',',true></b>
+<li>the disjunction monad for <b><';',fail></b>
+</ul>
+
+<P>
+<HR SIZE=4>
+
+<B><a name="DIFFLISTS">
+<B>T<FONT SIZE=-1>HE</FONT> 
+M<FONT SIZE=-1>ONADS</FONT> of 
+D<FONT SIZE=-1>IFFERENCE</FONT>
+L<FONT SIZE=-1>ISTS</FONT></B><p></B>
+
+The implementation of this monad is similar to that of the monads
+of lists and lazy function-lists.
+However, its correctness in the absence of occur check and
+the need for extra logical tests to detect `the end' of such
+lists make it less interesting especially when 
+a concept of lazy function-list is available
+as it is the case with \lambdaProlog-Mali.
+
+<P>
+<HR SIZE=4>
+
+<B><a name="MORPHI">
+<H4><FONT SIZE=+1>M</FONT>ONAD 
+<FONT SIZE=+1>M</FONT>ORPHISMS</H4></B>
+
+A monad morphism <A HREF="#f17">[wadler:comprehending:lfp:90]</A> is an application
+which preserves the monad operations.
+<dd>
+Intuitively they correspond to programs which exhibit a similar
+structure inside different syntactic wrappers.
+<dd>
+Morphisms of monads are a convenient way to implement
+equivalence preserving program transformations.
+<dd>
+Due to space constraints we will
+point out here only a less obvious morphism pair between the monad
+of lists and the monad of lazy function lists.
+
+<TABLE BORDER=1 CELLPADDING=10>
+<TR ALIGN=CENTER><TH ALIGN=left>
+<pre>
+ type list2flist (list A) -> flistT(A) -> o.                        
+ list2flist L FL :- pi nil\ (append L nil (FL nil)).                
+                                                                     
+ type flist2list flistT(A) -> (list A) -> o.                        
+ flist2list F (F []).                                               
+</TH> 
+</pre>                                               
+</TR>
+</TABLE>
+
+<P>
+<dd>
+<b>List2flist/2</b> is similar to a list-to-difference list converter
+except for the use of the universal quantifier <b>pi</b> to end
+the lazy function list.
+<dd>
+Notice that <b>flist2list/2</b> means simply applying
+the lazy function list to the list terminator <b>[]</b>.
+<dd>
+Let us just hint to an application:
+the programmer who works with monads is free to
+move from one representation to another. For instance
+he can debug a simpler `plain' list program
+and then chose a more efficient representation
+following a monad morphism.
+
+<P>
+<HR SIZE=4>
+
+<CENTER>
+<B><a name="METAMONAD">
+<H3><FONT SIZE=+2>M</FONT>ETAPROGRAMMING
+<FONT SIZE=+2>with</FONT>
+<FONT SIZE=+2>M</FONT>ONADS</H3></B>
+</CENTER>
+
+<P>
+<HR SIZE=4>
+
+<B><a name="PROGCLAUS">
+<H4><FONT SIZE=+1>P</FONT>ROGRAMS <FONT SIZE=+1>as</FONT>
+<FONT SIZE=+1>M</FONT>ONADS <FONT SIZE=+1>of</FONT>
+<FONT SIZE=+1>C</FONT>LAUSES</H4></B>
+
+
+Let us start from simple (algebraic) clause unfolding operation:
+<p>
+<b>Definition 1</b>
+  <I> Let <b>A_0:-A_1,A_2,...,A_n</b> and 
+<b>B_0:-B_1,...,B_m</b> be two clauses (suppose n > 0, m >= 0). 
+We define</i>
+<pre>
+<b>(A_0:-A_1,A_2,...,A_n)</b> <+> <b>(B_0:-B_1,...,B_m) = (A_0:-B_1,...,B_m,A_2,...,A_n)</b>\theta
+</pre>
+
+<i>with \theta = mgu(<b> A_1,B_0</b>). If the atoms <b>A_1</b> and
+<b>B_0</b> do not unify, the result of the composition is denoted as
+ <b>_|_</b>.
+<dd>
+Furthermore, as usual, we consider <b>A_0:-true,A_2,...,A_n</b> 
+to be equivalent to <b>A_0:-A_2,...,A_n</b>, and for any clause 
+<b>C</b>, <b>_|_ <+> C</b> = <b>C <+> _|_</b> = <b>_|_</b> .
+We suppose  that at least one operand has been renamed apart to 
+a variant with fresh variables.</i>
+<p> 
+<dd>
+Prolog programs and their evaluation is expressed naturally
+in terms of the monad of clause unfoldings, as described by the following
+Prolog meta-program.
+
+<TABLE BORDER=1 CELLPADDING=10>
+<TR ALIGN=CENTER><TH ALIGN=left>
+<pre>
+ unitClause(Cs,G,[A]):-A=(G:-[G]).                                  
+                                                                     
+ joinClause(Cs,Gs,NewGs):-                                          
+    findall(NewG,expandClause(Cs,Gs,NewG),NewGs).                   
+                                                                    
+ expandClause(Cs,Gs,NewG):-                                         
+    member(G,Gs), member(C,Cs),                                     
+    composeClause(G,C,NewG).                                        
+                                                                     
+ composeClause((H:-[]),_,(H:-[])).                                  
+ composeClause((H:-[B|Bs]),(B:-NewBs),(H:-Gs)):-                    
+    append(NewBs,Bs,Gs).
+</TH> 
+</pre>                                               
+</TR>
+</TABLE> 
+
+<P>                                           
+<dd>Notice that monad operations are parameterized with respect to a fixed
+set of clauses <b>Cs</b> (i.e. a given `program').
+Note that use of findall is important to ensure that clauses
+are not corrupted by ongoing unifications and for management
+of multiple bindings coming from unification of a given goal
+with multiple clauses.
+<dd>
+A Prolog resolution step (depth first search with leftmost selection rule)
+can be conveniently described as expandClause.
+Multiple parallel goal rewriting
+is naturally expressed as joinClause.
+<dd>
+A more efficient version is obtained by following the
+morphism from the monad of lists to the monad
+of difference lists.
+
+<P>
+<HR SIZE=4>
+
+<B><a name="EMBPROLOG">
+<H4><FONT SIZE=+1>A</FONT>N 
+<FONT SIZE=+1>E</FONT>MBEDDING <FONT SIZE=+1>of</FONT>
+<FONT SIZE=+1>P</FONT>ROLOG <FONT SIZE=+1>in</FONT>
+<FONT SIZE=+1>\L</FONT>AMBDA<FONT SIZE=+1>P</FONT>ROLOG</H4></B>
+
+Using the natural monad structure induced by the Prolog style
+<i> clause unfolding</i> operation <b>\oplus</b>
+we will give a straightforward
+embedding of Prolog in \lambdaProlog.
+<dd>
+We can map an arbitrary (untyped) Prolog term to a universal type
+in \lambdaProlog as follows:
+
+<TABLE BORDER=1 CELLPADDING=0>
+<TR ALIGN=CENTER><TH ALIGN=left>
+<pre>
+
+ kind prologT type.                                                 
+                                                                     
+ type pINT int -> prologT.                                          
+ joinClause(Cs,Gs,NewGs):-                                          
+ type pSTRUCT (list int) -> (list prologT) -> prologT.  
+            
+</TH> 
+</pre>                                               
+</TR>
+</TABLE>
+
+<P>
+<dd>
+It is easy to verify that by mapping variables to variables
+on both sides, the mapping will commute with unfoldings. Therefore 
+it will also commute with finite sequences of resolution steps. This
+allows us to write down a basic Prolog to \lambdaProlog compiler 
+in a few dozen lines.
+<dd>
+With this straightforward scheme, the compilation of
+
+<TABLE BORDER=1 CELLPADDING=10>
+<TR ALIGN=CENTER><TH ALIGN=left>
+<pre>
+app([],Ys,Ys).                                                     
+app([A|Xs],Ys,[A|Zs]) :- app(Xs,Ys,Zs).                            
+</TH> 
+</pre>                                               
+</TR>
+</TABLE>
+
+<P>
+ becomes:
+
+<TABLE BORDER=1 CELLPADDING=0>
+<TR ALIGN=CENTER><TH ALIGN=left>
+<pre>
+  
+ type demo prologT -> o.                                          
+                                                                          
+ demo (pSTRUCT "app" [(pSTRUCT "[]" []),A,A]).                  
+ demo (pSTRUCT "app" [(pSTRUCT "." [A,B]),C,                    
+                      (pSTRUCT "." [A,D])]) :-                  
+    demo (pSTRUCT "app" [B,C,D]).  
+                             
+</TH> 
+</pre>                                               
+</TR>
+</TABLE>
+
+<P>
+<dd>
+In practice, the scheme can be refined by having the mapping act as
+<b>id</b> on the set of builtins and Prolog's CUT operation. By
+mapping predicates to predicates and generating trivial type declarations
+for the arguments we obtain a practical embedding of Prolog in
+\lambdaProlog which is useful to run existing untyped 
+Prolog applications.
+
+<P>
+<HR SIZE=4>
+
+<CENTER>
+<B><a name="COMPREHENS">
+<H3><FONT SIZE=+2>L</FONT>IST
+<FONT SIZE=+2>C</FONT>OMPREHENSIONS
+<FONT SIZE=+2>with</FONT>
+<FONT SIZE=+2>M</FONT>ONADS</H3></B>
+</CENTER>
+
+We will describe in this section an implementation of
+list comprehensions which can be seen as an alternative to
+the findall/bagof Prolog primitives. Note that subtle differences
+exist between a deterministic emulation of findall and `the real thing',
+except for the ground case which is basically i.e similar to what's
+happening in functional languages. 
+Our emulation uses some stronger means,
+specific to \lambdaProlog,
+notably universal quantification to achieve, whithin an (almost) logical
+framework the equivalent of the term-copying, findall is based on.
+
+<P>
+<HR SIZE=4>
+
+<B><a name="CONCRENOTA">
+<H4><FONT SIZE=+1>C</FONT>ONCRETE 
+<FONT SIZE=+1>N</FONT>OTATION <FONT SIZE=+1>for</FONT>
+<FONT SIZE=+1>L</FONT>IST <FONT SIZE=+1>in</FONT>
+<FONT SIZE=+1>C</FONT>OMPREHENSIONS <FONT SIZE=+1>in</FONT> 
+<FONT SIZE=+1>\L</FONT>AMBDA<FONT SIZE=+1>P</FONT>ROLOG</H4></B>
+
+Let us consider two examples of set comprehensions~:
+
+<pre>
+            B_1 = {x|x <i>E L &</i> x}
+            B_2 = {[x,y]|x <i>E L_1 &</i> y <i>E L_2</i>}
+</pre>
+<dd>
+<i>B_1</i> is the set of odd elements in the set <i>L</i>, and <i>B_2</i>
+is the set of pairs of values taken from the sets <i>L_1</i> for the first 
+value in the pair and <i>L_2</i> for the second value in the pair.
+<dd>
+The corresponding list comprehensions in \lambdaProlog are defined
+as follows:
+
+<TABLE BORDER=1 CELLPADDING=10>
+<TR ALIGN=CENTER><TH ALIGN=left>
+<pre>
+ B1 <== (all x\ (x : (x <-- L, 1 is x mod 2)))                      
+ B2 <== (all y\ (all x\ ([x, y] : (x <-- L1, y <-- L2))))        
+</TH> 
+</pre>                                               
+</TR>
+</TABLE>
+
+<P>
+<dd>
+The syntax for list comprehension is:
+<pre>
+            <i>lcT</i>_\tau     ::= (<b>all</b> <i>variable</i>\ <i>lcT</i>_\tau) | (<i>term</i>_\tau <b>:</b> <i>qualifiers</i>) 
+            <i>qualifiers</i>   ::= <i>qualifier</i> | <i>qualifier</i> , <i>qualifiers</i> | <i>qualifiers</i>)
+            <i>qualifier</i>    ::= <i>generator</i> | <i>filter</i>
+            <i>generator</i>    ::= <i>variable</i> <b><--</b> <i>list</i>
+</pre>
+<dd>
+A <i>filter</i> is a Prolog goal like <b>1 is x mod 2</b>.
+Infix operators are used in \lambdaProlog with the following
+correspondence:
+
+<pre>
+
+     Set comp. | List comp.
+    -----------|-----------
+         <i>E</i>     |   <b><--</b>
+         <i>|</i>     |    <b>:</b>
+         <i>&</i>     |    <b>,</b>
+         <i>=</i>     |   <b><==</b>
+               |
+</pre>                     
+<dd>
+Variables in list comprehension are explicitly
+quantified with the quantifier <b>all</b>. The constructors <b>all</b>
+and <b>:</b> define the <i>List comprehension data type</i> which we
+call <b>lcT</b>.
+<p>
+
+<DT><B>Data Type for list comprehensions</B>
+Here are the \lambdaProlog type declarations
+for implementing list comprehensions:
+
+<TABLE BORDER=1 CELLPADDING=0>
+<TR ALIGN=CENTER><TH ALIGN=left>
+<pre>
+
+  kind lcT type -> type.                                             
+  type all (_B -> (lcT A)) -> (lcT A).                               
+  type : A -> o -> (lcT A).  
+                                        
+</TH> 
+</pre>                                               
+</TR>
+</TABLE>
+
+<P>
+<dd>
+<b>lcT</b> is a type constructor, and <b>all</b>
+and <b>:</b> and data constructors for that type.
+<dd>The generator<b><--</b> is a 2-argument predicate, its type in
+\lambdaProlog is:
+
+<TABLE BORDER=1 CELLPADDING=0>
+<TR ALIGN=CENTER><TH ALIGN=left>
+<pre>
+
+  % -X <-- +Xs : X is an element of the list Xs                      
+  type <-- X -> (list X) -> o.
+     
+</TH> 
+</pre>                                               
+</TR>
+</TABLE>
+
+<P>
+<dd>
+The translation from list comprehensions to lists is made with the
+predicate <b><==</b>. Its type is:
+
+<TABLE BORDER=1 CELLPADDING=6>
+<TR ALIGN=CENTER><TH ALIGN=left>
+<pre>
+ type <== (list A) -> (lcT A) -> o.                                 
+</TH> 
+</pre>                                               
+</TR>
+</TABLE>
+
+<P>
+<dd> 
+All operators have been declared infix (xfx) with priority 700.
+<p>
+<B>Translating list comprehensions to lists with the list-monad</B>
+P. Wadler <A HREF="#f17">[wadler:comprehending:lfp:90]</A>
+ gives a translation of
+list comprehensions into <i>list-monad</i> functions as follows:
+
+<pre>
+    <b>[t|x<--L]</b>  = (map \lambda x -> <i>t L</i>)
+    <b>[t|(p,q)]</b>  = (join [[t|q]|p])
+    <b>[t|true]</b>   = (unit <i>t</i>)
+    <b>[t|b]</b>      = (if <i>b then [t] else []</i>)
+</pre>
+<dd>
+Due to space limitations we will not give
+translation of the two last equivalence rules into the two last
+clauses in <A HREF="#fig1">figure 1</A>. Note that <b>if</b> is expresed with
+conditional <b>(P ? A ; B)</b> of \lambdaProlog.
+<dd>
+The rule for composing qualifiers is also easily translated. First, a
+list of list comprehensions is built and stored in <b>Xs</b>. Then the
+list comprehensions are translated applying the predicate <b><==</b>
+to <b>Xs</b> with the <b>map</b> predicate. The resulting list is
+finally flattened with the <b>join</b> predicate.
+
+<P>
+<DT><B>Using quantifications and higher order unification</B>
+The first rule in <A HREF="#fig1">figure 1</A> interprets the quantifier <b>all</b>.
+ A quantified variable is represented with the \lambda-variable
+of an abstraction such as <b>F</b>.  For each quantified variable, a
+new universal constant <b>x</b> is created (using \lambdaProlog
+logical connector <b>pi</b>).  The \lambda-variable is then
+substituted by a simple <i>application,</i> <b>(F x)</b>. \lambdaProlog
+\beta-reduction insures the (lazy) copying of the term.  Each new
+universal constant <b>x</b> is associated with a freshly created
+existentially quantified logical variable <b>_X</b>. This association
+is memorized with \lambdaProlog logical connector <b>=></b>. The
+dynamic assertion <b>variable x _X</b> extends the program context.
+Notice that, according to \lambdaProlog quantification rules, the
+quantifiers on the two variables <b>x</b> and <b>_X</b> are ordered
+as:
+
+<pre>
+    \exists <b>_X</b> \forall <b>x</b> 
+</pre>
+<B><a name="fig1"></B>
+<TABLE BORDER=1 CELLPADDING=10>
+<TR ALIGN=CENTER><TH ALIGN=left>
+<pre>
+% X <== Lc : X is the simple list corresponding to                 
+
+%            the comprehension list Lc                             
+Ys <== (all F) :- !,                                               
+   pi x\ (variable x _X => (Ys <== (F x))).                        
+Ys <== ((F U) : (U <-- Xs)) :-                                     
+   \+ (\+ (variable U F)), !,                                      
+   mapList x\ y\ (x <== y) Ys Xs,                                  
+Zs <== (T : (P , Q)) :- !,                                         
+   Xs <== ((T : Q) : P),                                           
+   mapList x\ y\ (x <== y) Ys Xs,                                  
+   joinList Ys Zs.                                                  
+Ys <== (T : true) :- !,                                            
+   unitList T Ys.                                                  
+Ys <== (T : P) :-                                                 
+   (P ? unitList T Ys ; Ys = []).                                  
+</TH> 
+</pre>                                               
+</TR>
+</TABLE>
+
+<P>
+<pre>                <b>Figure 1:</b> From list comprehensions to lists
+</pre>
+
+
+ The intuitionistic interpretation of such a declaration means that the
+signature of the logical variable <b>_X</b> does not contain the
+universal constant <b>x</b>.  Hence, \lambdaProlog system,
+subsequently enforces that the substitution values for<b>_X</b> do
+not contain the universal constant <b>x</b>. This is fundamental for
+the rest of the interpretation, see further the interpretation of the
+generators <b><--</b>.
+<dd>
+The predicate <b>variable</b> is a dynamic predicate declared as
+follows:
+
+<TABLE BORDER=1 CELLPADDING=10>
+<TR ALIGN=CENTER><TH ALIGN=left>
+<pre>
+type variable A -> (A -> B) -> o.                                  
+dynamic variable.                                               
+</TH> 
+</pre>                                               
+</TR>
+</TABLE>
+
+<P>
+<dd>
+\lambdaProlog higher order unification is used for interpreting the
+rule for the generators <b><--</b>. Higher order unification
+unifies the left term of the comprehension list with the term <b>(F U)</b>,
+and finds substitution values for the logical variable <b>F</b>.
+There may be several such substitutions, including some containing the
+universal constant <b>U</b>. The solutions containing the universal
+constant <b>U</b> are discarded with the interpretation of the goal
+<b>\+ (\+ (variable U F))</b>. The substitution values for <b>F</b> will be
+filtered because the second argument for <b>variable,</b> is a logical
+variable which does not contain the universal constant <b>U</b> in its
+signature.
+
+<P>
+<HR SIZE=4>
+
+<B><a name="USLIST">
+<B>U<FONT SIZE=-1>SING</FONT>
+L<FONT SIZE=-1>IST</FONT> 
+C<FONT SIZE=-1>OMPREHENSIONS</FONT></B><p></B>
+
+Here are four examples of the use of list comprehensions:
+
+<ol>
+<li>Generating the odd numbers of a list <b>L</b>
+<li>Generating the pairs <b>[x,y]</b> with the values of <b>x</b>
+taken from a list <b>L1</b>, and the values of <b>y</b>
+taken from a list <b>L2</b>.
+<li> Generating the pairs <b>[x,y]</b> with the values of<b>x</b>
+taken from a list <b>L1</b>, and the values of <b>y</b>
+taken from a list<b>L2</b>, such that <i>y =/= x</i>.
+<li>Generating the values <b>[a,b,c]</b> such that <i>a^2+b^2=c^2</i>.
+</ol>
+
+<TABLE BORDER=1 CELLPADDING=10>
+<TR ALIGN=CENTER><TH ALIGN=left>
+<pre>
+Odds <== (all x\ (x : (x <-- L, 1 is x mod 2)))                    
+Pairs <== (all y\ (v x\ ([x, y] : (x <-- L1, y <-- L2))))          
+Pairs <== (all y\ (v x\                                            
+   ([x, y] : (x <-- L1, y <-- L2, y =\= x))))                      
+R <== (all c\ (all b\ (all a\                                      
+   ([a,b,c] : (a <-- L, b <-- L, a < b, c <-- L;                   
+                 a*a + b*b =:= c*c)))))                            
+</TH> 
+</pre>                                               
+</TR>
+</TABLE>
+
+<P>   
+Here is a quick sort program using list comprehensions.
+
+<TABLE BORDER=1 CELLPADDING=10>
+<TR ALIGN=CENTER><TH ALIGN=left>
+<pre>% sort X Y : list Y is a sorted version of list X                  
+type sort (list A) -> (list A) -> o.                               
+sort [] [].                                                        
+sort [X | L] S :-                                                  
+   Low <== (all y\ (y : (y <-- L , y < X))),                       
+   sort Low SLow,                                                  
+   Up <== (all y\ (y : (y <-- L , y > X))),                        
+   sort Up SUp,                                                    
+   append SLow [X | SUp] S.                                        
+</TH> 
+</pre>                                               
+</TR>
+</TABLE>
+
+<P>
+<HR SIZE=4>
+
+<CENTER>
+<B><a name="SOLPREDICA">
+<H3><FONT SIZE=+2>M</FONT>ONAD-<FONT SIZE=+2>B</FONT>ASED
+<FONT SIZE=+2>C</FONT>OMPREHENSIONS<BR>
+<FONT SIZE=+2>VS</FONT>.
+<FONT SIZE=+2>A</FONT>LL-<FONT SIZE=+2>S</FONT>OLUTION
+<FONT SIZE=+2>P</FONT>REDICATES</H3></B>
+</CENTER>
+
+<P>
+<HR SIZE=4>
+
+<B><a name="EXPRESOPERA">
+<H4><FONT SIZE=+1>E</FONT>XPRESSING 
+<FONT SIZE=+1>M</FONT>ONAD
+<FONT SIZE=+1>O</FONT>PERATIONS <FONT SIZE=+1>in</FONT>
+<FONT SIZE=+1>T</FONT>ERMS <FONT SIZE=+1>of</FONT>
+<FONT SIZE=+1>A</FONT>LL-<FONT SIZE=+1>S</FONT>OLUTION
+<FONT SIZE=+1>P</FONT>REDICATES</H4></B>
+
+The differences between comprehensions in functional
+languages and logic programming
+come mostly from the presence of nondeterminism, which will
+tend to return instances with renamed logical variables
+unless instructed otherwise with appropriate quantifiers. 
+<dd>
+In \lambdaProlog-Mali, <b>bagof</b> is typed as follows:
+
+<TABLE BORDER=1 CELLPADDING=10>
+<TR ALIGN=CENTER><TH ALIGN=left>
+<pre>
+type bagof (A->o) -> (list A) -> o.                                
+mode (setof +AbstractGoal ?SetOfSols)                              
+</TH> 
+</pre>                                               
+</TR>
+</TABLE>
+
+<P>
+<dd>
+When executed it picks an unknown (logical variable)
+<b>U</b> and unifies the non-empty
+list of solutions for <b>U</b> in <b>(AbstractGoal U)</b> with 
+<b>SetOfSols</b>. As in any Prolog,
+if there are unknowns in AbstractGoal (global unknowns),
+<b>bagof</b> will backtrack on alternative solutions corresponding
+to different instantiations for global unknowns.
+<dd>
+With appropriate quantification (as available
+in \lambdaProlog) <b>bagof</b>
+can be used therefore as a practical way to implement
+for instance <b>join</b> and <b>map</b> as folows:
+
+<TABLE BORDER=1 CELLPADDING=10>
+<TR ALIGN=CENTER><TH ALIGN=left>
+<pre>
+type join (list (list T)) -> (list T) -> o.                        
+join Xss Ys :-                                                     
+   bagof X\(sigma Xs\(member Xs Xss, member X Xs)) Ys.             
+                                                                    
+type map (A -> B -> o) -> (list A) -> (list B) -> o.               
+map F Xs Ys :-                                                     
+   bagof Y\(sigma X\(member X Xs, F X Y)) Ys.                      
+</TH> 
+</pre>                                               
+</TR>
+</TABLE>
+
+<P>
+<dd>
+Except for reversibility and behavior on non-ground <b>F</b>
+map will fonction as if defined by:
+
+<TABLE BORDER=1 CELLPADDING=14>
+<TR ALIGN=CENTER><TH ALIGN=left>
+<pre>
+map _ [] [].                                                      
+map F [X|Xs] [Y|Ys] :- F X Y, map F Xs Y                           
+</TH> 
+</pre>                                               
+</TR>
+</TABLE>
+
+<P>
+<dd>
+i.e. a goal like
+<pre>
+    Xs=[A,B,B,A], map unit Xs Zs.
+</pre>
+ will return <b>Zs=[[A],[B],[B],[A]].</b>
+<dd>
+Notice that in \lambdaProlog-Mali <b>bagof</b> (and 
+also <b>findall</b>) allows
+to specify its intended use
+through explicit quantification.
+However, by replacing <b>bagof</b> with
+<b>findall</b>, as in Prolog, <i>sharing</i> is not preserved for 
+logical variables, i.e. something like <b>Zs=[[_A],[_B],[_C],[_D]].</b>
+is returned.
+
+<P>
+<HR SIZE=4>
+
+<B><a name="BAGOF">
+<H4><FONT SIZE=+1>D</FONT>IFINING 
+<FONT SIZE=+1>L</FONT>IST
+<FONT SIZE=+1>C</FONT>OMPREHENSIONS <FONT SIZE=+1>with</FONT>
+<FONT SIZE=+1>B</FONT>AGOF</H4></B>
+
+The following is a translation of our list comprehensions with the
+builtin predicate <b>bagof</b>. This translation first converts the
+list comprehension into an abstraction wich is given as an argument to
+the predicate <b>bagof</b>. The conversion is made with the predicate
+<b>get_list</b>. Notice the terminal case which builds the abstraction
+by merely transforming a list comprehension <b>(T : P)</b> into the
+abstraction <b>x\ (x = T, P)</b>. Notice also the definition of the
+predicate <b><--</b> which is directly mapped onto the
+non-deterministic predicate <b>member</b>. In our previous definition
+of list comprehension, the predicate <b><--</b> did not need to be defined
+as it was meta-interpreted.
+
+<TABLE BORDER=1 CELLPADDING=0>
+<TR ALIGN=CENTER><TH ALIGN=left>
+<pre>
+
+ % get_list +Lc -Goal                                               
+ type get_list (lcT A) -> (A -> o) -> o.                                    
+ get_list (all F) y\ (sigma x\ (R x y)) :- !,                       
+    pi x\ (get_list (F x) y\ (R x y)).                              
+ get_list (T : P) x\ (x = T, P).                                    
+                                                                    
+ X <-- Xs :- member X Xs.                                           
+                                                                    
+ Ys <== P :- get_list P G, bagof G Ys.  
+                            
+</TH> 
+</pre>                                               
+</TR>
+</TABLE>
+
+<P>
+<HR SIZE=4>
+
+<CENTER>
+<B><a name="RELWORK">
+<H3><FONT SIZE=+2>R</FONT>ELATED
+<FONT SIZE=+2>W</FONT>ORK</H3></B>
+</CENTER>
+        
+Despite the proven expressiveness of monadic style in
+functional programming  <A HREF="#f17">[wadler:comprehending:lfp:90], 
+<A HREF="#f18">[wadler92:acm]</A>
+and denotational semantics <A HREF="#f9">[Moggi:monads]</A>
+no systematic exploration of
+the concept has been done for logic programming languages.
+However, ideas alike in substance are present in
+Peter VanRoy's Extended DCGs <A HREF="#f16">[edcg]</A>
+and their Wild-Life <A HREF="#f1">[kaci91:PLILP]</A> counterparts,
+which encapsulate, through a preprocessing technique, a concept of state
+similar to the state transformers in functional programming
+<A HREF="#f17">[wadler:comprehending:lfp:90]</A> and some of
+the morphisms we have described are `implicitely' known
+to good Prolog programmers.
+Implicit accumulators, implemented with backtrackable destructive
+assignment for BinProlog and Life, taking advantage of
+single-thread data representations are described in <A HREF="#f15">[TDF95a]</A>.
+Similar approaches in handling state in functional and logic programming
+although not covered in this paper, largely motivate our effort,
+as both major declarative programming paradigms share the reasons 
+for adopting monads in every-day  programming. 
+
+<P>
+<HR SIZE=4>
+
+<CENTER>
+<B><a name="FUTURE">
+<H3><FONT SIZE=+2>F</FONT>UTURE
+<FONT SIZE=+2>W</FONT>ORK</H3></B>
+</CENTER>
+
+The following are some of the most attempting follow-ups to
+the experiments described in this paper:
+
+<ul>
+<li>state transformers in logic programming 
+<li>an implementation of arbitrary monad comprehensions
+<li>the monad of the answers of a (nondeterministic) logic program
+<li>Fold/Unfold transformations and monad operations
+<li>transforming meta-interpreters with monad operations
+<li>a monadic view of continuation passing and binarization in logic programming
+</ul>
+<dd>
+For instance, meta-interpreters for logic programming
+languages can be described in terms of the monad of clause 
+unfoldings. All-solution predicates can be seen as morphisms from
+a suitably organized monad of answers to the monad of
+lists. Knowing their monad properties allows to transform
+(i.e. `partially evaluate')
+all-solution predicates in a principled way to their more
+efficient first-order equivalents.
+
+<P>
+<HR SIZE=4>
+
+<CENTER>
+<B><a name="CONCLU">
+<H3><FONT SIZE=+2>C</FONT>ONCLUSION</H3></B>
+</CENTER>
+
+We have shown that monads are as useful to describe the basic
+data structures of logic programming languages as they are in functional
+programming. In particular we have organized function lists
+as a monad and studied some interesting monad morphisms.
+We have introduced a monad-based concept of
+lists comprehensions for \lambdaProlog. We have described
+Prolog's unfolding operation in a monadic style, with
+a practical compilation scheme from untyped
+Prolog to \lambdaProlog. 
+The use of an intrinsically high order logic programming
+language (\lambdaProlog) has been shown particularly
+useful, although most of our techniques will also work
+in ordinary Prolog systems.
+Although transposing an elegant <i>declarative</i> concept from one
+declarative programming paradigm to another is not difficult,
+their elegant implementation was not always obvious,
+as is in the case of the monadic view of lazy function lists or
+the emulation of list comprehensions.
+Moreover, meta-programming in a monadic style
+is novel and it looks like a good starting point for a uniform
+description  for the semantics of logic programs
+and for program transformations.
+ 
+<P>
+<HR SIZE=4>
+
+<CENTER>
+<B><a name="ACKNOWLEDGS">
+<H3><FONT SIZE=+2>A</FONT>CKNOWLEDGEMENT</H3></B>
+</CENTER>
+
+Paul Tarau thanks for support from the Canadian National Science and 
+Engineering Research Council (grant OGP0107411), the FESR of
+the Universit'e de Moncton and for the fellowships from
+Universit'e de Rennes and the I.R.I.S.A Rennes.
+Discussions with members of the LANDE group and especially
+Pascal Brisset, Pascal Fradet, Daniel LeMetayer
+and Olivier Ridoux have been
+very helpful in clarifying our ideas on the subject.
+
+<P>
+<HR SIZE=4>
+
+<CENTER>
+<B><a name="REFS">
+<H3><FONT SIZE=+2>R</FONT>EFERENCES</H3></B>
+</CENTER>
+
+<P>
+<DL>
+<DT>
+<B><a name="f1">[kaci91:PLILP]</B> H. Ait-Kaci and A. Podelski.
+<DD> Towards a meaning of LIFE. In J.Maluszynski and M.Wirsing, editors,
+<i>Proceedings of the 3rd International Symposium on Programming Language
+ Implementation and Logic Programming (Passau, Germany)</i>,
+ pages 255--274. Springer-Verlag, LNCS 528, August 1991.
+
+<P>
+<DT>
+<B><a name="f2">[bekkers:mali:slp:86]</B> 
+Y. Bekkers, B. Canet, O. Ridoux, and L. Ungaro.
+<DD>MALI: A memory with a real-time garbage collector for implementing
+logic programming languages. In <i>3rd Symp. Logic Programming</i>,
+Salt Lake City, UT, USA, 1986.IEEE.
+
+<P>
+<DT>
+<B><a name="fX">[brisset:these:92]</B> P.Brisset.
+<DD>Compilation de \lambdaProlog. These, Universite de Rennes I, 1992.
+
+
+<P>
+<DT>
+<B><a name="f3">[brisset:naivereverse:iclp:91]</B> P.Brisset and O.Ridoux. 
+<DD>
+Naive reverse can be linear. In K.Furukawa, editor,
+<i>8th Int. Conf. Logic Programming</i>, pages
+  857--870, Paris, France, 1991. MIT Press. ftp://ftp.irisa.fr/local/lande.
+
+<P>
+<DT>
+<B><a name="f4">[brisset:architecture:lpw:92]</B>  P.Brisset and O.Ridoux.
+<DD>The architecture of an implementation of \lambdaProlog:
+  Prolog/Mali.
+In <i>Workshop on \lambdaProlog</i>, Philadelphia, PA, USA, 1992.
+ftp://ftp.irisa.fr/local/lande.
+
+
+<P>
+<DT>
+<B><a name="f5">[Goguen88]</B> J.Goguen. 
+<DD> Higher order functions considered unnecessary for higher order programming.
+Technical report, SRI International, Jan. 1989. Technical report SRI-CSL-88-1.
+
+<p>
+<DT>
+<B><a name="f6">[miller:logic:jlc:91]</B>  D.Miller.
+<DD>A logic programming language with lambda-abstraction, function
+  variables, and simple unification.
+<i>J. Logic and Computation</i>, 1(4):497--536, 1991.
+
+<P>
+<DT>
+<B><a name="f7">[miller:unification:iclp:91]</B>  D.Miller.
+<DD> Unification of simply typed lambda-terms as logic programming.
+In K.~Furukawa, editor, <i>8th Int. Conf. Logic Programming</i>, pages
+  255--269, Paris, France, 1991. MIT Press.
+
+<P>
+<DT>
+<B><a name="f8">[miller:hereditary:lics:87]</B>  
+D.Miller, G.Nadathur, and A.Scedrov.
+<DD> Hereditary Harrop formulas and uniform proof systems.
+In D.Gries, editor, <i>2nd Symp. Logic in Computer Science</i>, pages
+ 98--105, Ithaca, New York, USA, 1987.
+
+<P>
+<DT>
+<B><a name="f9">[Moggi:monads]</B> E.Moggi. 
+<DD>
+Notions of computation and monads. 
+<i>Information and Computation</i>, 93:55--92, 1991.
+
+<P>
+<DT>
+<B><a name="f10">[mycroft:poli]</B> A.Mycroft and R.A. O'Keefe. 
+<DD>
+ A polimorphic type system for prolog.
+<i>Artificial Intelligence</i>, (23):295--307, 1984.
+
+<P>
+<DT>
+<B><a name="f11">[nadathur:overview:slp:88]</B>  G.Nadathur and D.Miller.
+<DD>
+ An overview of \lambdaProlog. In K.Bowen and R.Kowalski,
+ editors, <i>Symp. Logic Programming</i>,
+ pages 810--827, Seattle, Washington, USA, 1988.
+
+<P>
+<DT>
+<B><a name="f12">[nadathur:higherorder:jacm:90]</B>  G.Nadathur and D.Miller.
+<DD> Higher-order Horn clauses.
+<i>JACM</i>, 37(4):777--814, 1990.
+
+<P>
+<DT>
+<B><a name="f13">[nadathur:representation:lfp:90]</B>
+ G.Nadathur and D.Wilson.
+<DD> A representation of lambda terms suitable for operations on their
+  intensions.
+ In <i> ACM Conf. Lisp and Functional Programming</i>, pages 341--348,
+  Nice, France, 1990. ACM Press.
+
+<P>
+<DT>
+<B><a name="f14">[Tarau95:BinProlog]</B>  P.Tarau.
+<DD>
+ BinProlog 3.30 User Guide. Technical Report 95-1,
+ D'epartement d'Informatique, Universit'e de Moncton, Feb. 1995.
+ Available by ftp from <i>clement.info.umoncton.ca</i>.
+
+<P>
+<DT>
+<B><a name="f15">[TDF95a]</B>  P.Tarau, V.Dahl, and A.Fall.
+<DD>
+ Backtrackable State with Linear Assumptions, Continuations
+  and Hidden Accumulator Grammars. Technical Report 95-2,
+ D'epartement d'Informatique, Universit'e de Moncton,
+ Apr. 1995. Available by ftp from <i>clement.info.umoncton.ca</i>.
+<p>
+
+<P>
+<DT>
+<B><a name="f16">[edcg]</B>  P.Van Roy.
+<DD>
+ A useful extension to Prolog's Definite Clause Grammar notation.
+<i>SIGPLAN notices</i>, 24(11):132--134, Nov. 1989.
+
+<P>
+<DT>
+<B><a name="f17">[wadler:comprehending:lfp:90]</B>  
+P.Wadler.
+<DD>
+ Comprehending monads. In <i>ACM Conf. Lisp and Functional Programming</i>,
+ pages 61--78, Nice, France, 1990. ACM Press.
+
+<P>
+<DT>
+<B><a name="f18">[wadler92:acm]</B>  P.Wadler.
+<DD>
+ The essence of functional programming.
+ In <i>ACM Symposium POPL'92</i>, pages 1--15. ACM Press, 1992.
+
+<P>
+<DT>
+<B><a name="f19">[Warren82]</B> D.H.D. Warren.
+<DD>
+Higher-order extensions to Prolog -- are they needed?
+In D.Michie, J.Hayes, and Y.H. Pao, editors, <i>Machine
+Intelligence 10</i>. Ellis Horwood, 1981.
+</DL>
+
+<P>
+<HR SIZE=4>
+
+<P>
+<DD>
+<h5><B><a name="footnote1">(1)</B> 
+See the `axiomatization' of the list-monad in the following section.</h5>
+
+<P>
+<DD>
+<h5><B><a name="footnote2">(2)</B>
+using the concrete syntax of \lambdaProlog-Mali, with parametric types obtained through macro-expansion</h5>

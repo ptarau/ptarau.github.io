@@ -1,0 +1,1236 @@
+
+<TITLE>Logic Programming and Logic Grammars with Binarization and 
+First-order Continuations</TITLE>
+
+<CENTER>
+<H2><FONT SIZE=+3>L</FONT>OGIC
+<FONT SIZE=+3>P</FONT>ROGRAMMING
+<FONT SIZE=+3>and</FONT><BR>
+<FONT SIZE=+3>L</FONT>OGIC
+<FONT SIZE=+3>G</FONT>RAMMARS
+<FONT SIZE=+3>with</FONT>
+<FONT SIZE=+3>B</FONT>INARIZATION<BR>
+<FONT SIZE=+3>and</FONT>
+<FONT SIZE=+3>F</FONT>IRST-<FONT SIZE=+3>O</FONT>RDER
+<FONT SIZE=+3>C</FONT>ONTINUATIONS
+</H2>
+</CENTER>
+
+<PRE>
+<A HREF="http://www.sciences.umoncton.ca/infoque/PAULT.HTM">
+Paul Tarau</A>
+Universit'e de Moncton
+D'epartement d'Informatique
+Moncton, N.B.  Canada, E1A 3E9,
+<B>tarau@info.umoncton.ca</B>
+
+<A HREF="http://www......">
+Veronica Dahl </A>
+Logic Programming Group 
+Department of Computing Sciences 
+Simon Fraser University
+Burnaby, B.C. Canada V5A 1S6
+<B>veronica@cs.sfu.ca</B> 
+</PRE>
+
+<HR SIZE=4>
+<center>
+<b>Abstract</b>
+</center>
+<DL>
+<DT>
+<DD>Continuation passing binarization and specialization of the WAM
+to binary logic programs have been proven practical implementation
+techniques in the BinProlog system.
+In this paper
+we investigate the additional
+benefits of having first order continuations at source level.
+We devise a convenient
+way to manipulate them by introducing
+multiple-headed clauses which give direct
+access to continuations at source-level.
+We discuss the connections with
+various logic grammars,
+give examples of typical problem solving tasks
+and show how looking at the future of computation can improve
+expressiveness and describe complex
+control mechanisms without leaving
+the framework of binary definite programs.
+<dd>
+<i>Keywords:</i>
+continuation passing binary logic programs,
+logic grammars,
+program transformation based compilation,
+continuations as first order objects,
+logic programming with continuations.
+</DL>
+
+<P>
+<HR SIZE=4>
+
+<UL>
+<LI><A HREF="#INTRO">Introduction</A>
+<LI><A HREF="#MOTIVA">Motivation</A>
+<LI><A HREF="#MULTIPLE">
+       Multiple Head Clauses in Continuation Passing Binary Programs</A>
+  <UL>
+  <LI><A HREF="#BINARITRANSFO">The Binarization Transformation</A>
+  <LI><A HREF="#MODIFY">
+         Modifying the binarization preprocessor for multi-head clauses</A>
+  </UL>
+<LI><A HREF="#PROGRAMMULTI-HEADED">
+       Programming with Continuations in Multiple-Headed Clauses</A>
+<LI><A HREF="#MULTIPLE-HEADED">
+       Multiple Headed Clauses VS. Full-Blown Continuations</A>
+<LI><A HREF="#CONTGRAM">Continuation Grammars</A>
+  <UL>
+  <LI><A HREF="#STRATEVERSA">Parsing Strategy Versatility</A>
+  <LI><A HREF="#LONG-DIST">Relating of long-distance constituents</A>
+  <LI><A HREF="#COMPVIEW">Computation viewed as parsing</A>
+  </UL>
+<LI><A HREF="#CONCLU">Conclusion</A>
+<LI><A HREF="#ACKNOWLEDG">Acknowledgment</A>
+<LI><A HREF="#REFS">References</A>
+<LI><A HREF="#APPENDIX">Appendix A</A>
+</UL>
+
+<P>
+<HR SIZE=4>
+
+<CENTER>
+<B><a name="INTRO">
+<H3><FONT SIZE=+2>I</FONT>NTRODUCTION</H3></B>
+</CENTER>
+
+From its very inception, logic programming has cross-fertilized with computational linguistics in very productive ways. Indeed, logic programming itself grew from the automatic deduction needs of a question-answering system in French <A HREF="#f7">[jlp23]</A>. Over the years we have seen other interesting instances of this close-relatedness. The idea of continuations, developed in the
+field of denotational semantics <A HREF="#f22">[Stoy77]</A>
+and functional programming <A HREF="#f27">[WAND80]</A>,<A HREF="#f26">[wadler93:cont]</A>
+has found its way into programming applications,
+and has in particular been useful recently in logic programming.
+<DD>
+In this article we continue this tradition by adapting to logic programming with continuations some of the techniques that were developed in logic grammars for computational linguistic applications. In particular, logic grammars have been augmented by allowing extra symbols and meta-symbols in the left hand sides of  rules <A HREF="#f6">[COL78</A>,<A HREF="#f17">[Pereira:XG]</A>,
+<A HREF="#f9">[DAHL89e]</A>. Such extensions allow for straightforward expressions of contextual information, in terms of which many interesting linguistic phenomena have been described. We show that such techniques can be efficiently transfered to continuation passing binary programs, that their addition motivates an interesting style of programming for applications other than linguistic ones, and that introducing continuations in logic grammars with multiple left-hand-side symbols motivates in turn novel styles of bottom-up and mixed parsing, while increasing efficiency.
+
+<P>
+<HR SIZE=4>
+
+<CENTER>
+<B><a name="MOTIVA">
+<H3><FONT SIZE=+2>M</FONT>OTIVATION</H3></B>
+</CENTER>
+
+Several attempts to enhance the expressiveness of logic programming have
+been made over the years. These efforts range from simply providing handy
+notational variants, as in DCGs, to implementing sophisticated
+new frameworks, such as HiLog <A HREF="#f5">[chen:warren:91:plilp]</A>,
+<A HREF="#f29">[WarrenXOLDT]</A>. 
+<DD>
+In \lambdaProlog for instance 
+<A HREF="#f14">[miller:lprolog]</A>,<A HREF="#f15">[Miller89Lex]</A>
+there is a % beautiful notion TOO STRONG ? ## PAUL
+nice facility, that of scoping of clauses, 
+which is provided by the \lambdaProlog
+incarnation of the intuitionistic rule for implication introduction:
+<P>
+<CENTER>
+<TABLE BORDER=1 CELLPADDING=1>
+<TR ALIGN=CENTER><TH ALIGN=left>
+<PRE>
+
+  Sigma; Gamma,P |- C
+---------------------- => _R
+Sigma; P |- Gamma => C
+</PRE></TH></TR>
+</TABLE>
+</CENTER>
+<P>
+
+
+<B>Example 1</B> 
+<i>For instance, in the \lambdaProlog program</i><A HREF="#footnote1">(1)</A>:
+
+<PRE>    insert X Xs Ys :- 
+        paste X => ins Xs Ys. 
+
+    ins Ys [X|Ys] :- paste X.
+    ins [Y|Ys] [Y|Zs]:- ins Ys Zs.
+</PRE>
+
+<I>used to nondeterministically insert an element in a list,
+the unit clause <B>paste X</B> is available only within the scope of the
+derivation for</I> <B>ins</B>.
+<P>
+<DD>With respect to the corresponding Prolog program
+we are working with a simpler
+formulation in which the element to be inserted does not have to percolate
+as dead weight throughout each step of the computation, only to be used in
+the very last step. We instead clearly isolate it in a global-value manner,
+within a unit clause which will only be consulted when needed, and which
+will disappear afterwards.
+<DD>
+Now, let us imagine we are given the ability to write part of a proof state
+context, i.e., to indicate in a rule's left-hand side not only the
+predicate which should match a goal atom to be replaced by the rule's body,
+but also which other goal atom(s) should surround the targeted one in
+order for the rule to be applicable. 
+<P>
+
+<B>Example 2</B>
+<I>Given this, we could write a program
+for insert which strikingly resembles the \lambdaProlog program given
+above:</I>
+
+<PRE>insert(X,Xs,Ys):-ins(Xs,Ys),paste(X).
+
+ins(Ys,[X|Ys]),paste(X).
+ins([Y|Ys],[Y|Zs]):-ins(Ys,Zs).
+</PRE>
+ Note that the element to be inserted is not passed to the recursive
+clause of the predicate <B> ins/2</B> (which becomes therefore simpler),
+while the unit clause of the predicate <B> ins/2</B> will communicate
+directly with <B> insert/3</B> which will directly `paste' the appropriate
+argument in the continuation.
+<DD> 
+In this formulation, the element to be inserted is first given as
+right-hand side context of the simpler predicate <B>ins/2</B>, and this predicate's
+first clause consults the context <B>paste(X)</B> only when it is time to place it within the output list,
+i.e. when the fact <B>ins(Ys,[X|Ys]),paste(X)</B> is
+reached. 
+<DD>
+Thus for this example, we can obtain the expressive power of
+\lambdaProlog without having to resort to an entirely new framework.
+As we shall see in the <A HREF="#MULTIPLE">Multiple Head Clauses in Continuation Passing Binary Programs</A>, we can simply use any Prolog system combined
+with a simple transformer to binary programs <A HREF="#f24">[Tarau90:PLILP]</A>.
+
+<P>
+<HR SIZE=4>
+
+<CENTER>
+<B><a name="MULTIPLE">
+<H3><FONT SIZE=+2>M</FONT>ULTIPLE
+<FONT SIZE=+2>H</FONT>EAD <FONT SIZE=+2>C</FONT>LAUSES
+<FONT SIZE=+2>in</FONT><BR>
+<FONT SIZE=+2>C</FONT>ONTINUATION 
+<FONT SIZE=+2>P</FONT>ASSING <FONT SIZE=+2>B</FONT>INARY
+<FONT SIZE=+2>P</FONT>ROGRAMS</H3></B>
+</CENTER>
+
+We will start by reviewing the program transformation
+that allows compilation of logic programs towards a
+simplified WAM specialized for the execution of binary logic programs.
+We refer the reader to <A HREF="#f24">[Tarau90:PLILP]</A> for the original
+definition of this transformation.
+
+<P>
+<HR SIZE=4>
+
+<B><a name="BINARITRANSFO">
+<H4><FONT SIZE=+1>T</FONT>HE <FONT SIZE=+1>B</FONT>INARIZATION
+<FONT SIZE=+1>T</FONT>RANSFORMATION</H4></B>
+
+Binary clauses have only one atom in the body 
+(except for some inline `builtin' operations like arithmetics)
+and therefore they need no `return' after a call.
+A transformation introduced in <A HREF="#f24">[Tarau90:PLILP]</A> allows to
+faithfully represent logic programs with operationally equivalent
+binary programs.
+<DD>
+To keep things simple we will describe our transformations in the case
+of definite programs. First, we need to modify the well-known description
+of SLD-resolution (see <A HREF="#f11">[LL87]</A>) to be closer to Prolog's operational
+semantics. We will follow here the notations of <A HREF="#f25">[pt93b]</A>.
+<DD>
+Let us define the <I> composition</I> operator \mf{\oplus} 
+that combines clauses by unfolding the leftmost body-goal
+of the first argument.
+<P>
+
+<B>Definition 1</B>
+<i>Let <B> A_0:-A_1,A_2,...,A_n</B> and 
+<B> B_0:-B_1,...,B_m</B> be two clauses (suppose <i>n>0, m >= 0</i>). 
+We define</i>
+ 
+<pre><B>(A_0:-A_1,A_2,...,A_n)</B> <+> <B>(B_0:-B_1,...,B_m) = (A_0:-B_1,...,B_m,A_2,...,A_n)</B>\theta
+</pre>
+<i>with \theta = mgu(<B> A_1</B>,<B>B_0</B>). If the atoms <B>A_1</B> and
+<B> B_0</B> do not unify, the result of the composition is denoted as _|_.
+Furthermore, as usual, we consider <B> A_0:-true,A_2,\ldots,A_n</B> 
+to be equivalent to <B> A_0:-A_2,...,A_n</B>, and for any clause 
+<B> C</B>, <B> _|_  <+> C = C <+> _|_ = _|_ </B>.
+We assume that at least one operand has been renamed to a variant with fresh variables.</i> 
+<p>
+
+<DD>Let us call this Prolog-like inference rule LF-SLD resolution (LF for
+`left-first'). Remark that by working on the program <i>P'</i> obtained
+from <i>P</i> by replacing each clause with the set of clauses obtained by
+all possible permutations of atoms occurring in the clause's body every
+SLD-derivation on <i>P</i> can be mapped to an LF-SLD derivation on <i>P'</i>.
+<DD>
+Before defining the binarization transformation, we describe two
+auxiliary transformations.
+<DD>
+The first transformation converts facts into rules by  giving
+them the atom <B> true</B> as body. E.g., the fact <B> p</B> is
+transformed into the rule <B> p :- true</B>.
+<DD>
+The second transformation, inspired by <A HREF="#f28">[Warren82]</A>,
+eliminates the metavariables by wrapping them in a <B> call/1</B> goal.
+E.g., the rule <B> and(X,Y):-X, Y</B> is transformed into 
+<B>and(X,Y) :- call(X), call(Y).</B>
+<DD>
+The transformation of <A HREF="#f24">[Tarau90:PLILP]</A>
+(<I> binarization</I>) adds continuations
+as  extra   arguments  of   atoms  in a way that  preserves
+also first argument indexing.
+<P>
+
+<B>Definition 2</B> 
+<I>Let P be  a definite  program  and <B>Cont</B>  a  new
+variable. Let  <B>T</B> and <B>E=p(T_1,...,T_n)</B> be  two 
+expressions.<A HREF="#footnote2">(2)</A> We  denote by
+<B>\psi(E,T)</B> the expression <B>p(T_1,...,T_n,T)</B>. Starting with the clause</I>
+
+<DD> <B>(C)</B>  A :- B_1,B_2,...,B_n.
+<p>
+<i>we construct the clause</i>
+
+<DD> <B>(C')</B>  \psi(A,Cont) :- \psi(B_1,\psi(B_2,...,\psi(B_n,Cont))).
+<P>                         
+<i>The set P' of all clauses <B>C'</B> obtained from the clauses of P is called
+the binarization of P. </i>
+<P>
+
+<B>Example 3</B>
+<I>The following example shows the result of this
+transformation on the well-known `naive reverse' program:</I>
+
+<PRE>   app([],Ys,Ys,Cont):-true(Cont).
+   app([A|Xs],Ys,[A|Zs],Cont):-app(Xs,Ys,Zs,Cont).
+                                  
+   nrev([],[],Cont):-true(Cont).
+   nrev([X|Xs],Zs,Cont):-nrev(Xs,Ys,app(Ys,[X],Zs,Cont)).
+</PRE>
+
+These transformations preserve a strong operational equivalence with the
+original program with respect to the LF-SLD resolution rule which
+is <I> reified</I> in the syntactical structure of the resulting program.
+<P>
+
+<B>Theorem 1</B>
+<I>(<A HREF="#f25">[pt93b]</A>)
+Each resolution step of an LF-SLD derivation on a definite program <i>P</i>
+can be mapped to an SLD-resolution step of the binarized program <i>P'</i>.
+Let G be an atomic goal and G'=\psi(G,true). Then, computed answers obtained
+querying P with G are the same as those obtained by querying P' with G'.</I>
+<P>
+
+<DD>Notice that the equivalence between the binary version and
+the original program
+can also be explained in terms of fold/unfold transformations
+as suggested by <A HREF="#f18">[proietti:pers1]</A>.
+<DD>
+Clearly, continuations become explicit in the binary version of the program.
+We will devise a technique to access and manipulate them in an intuitive
+way, by modifying BinProlog's binarization preprocessor.
+
+<P>
+<HR SIZE=4>
+
+<B><a name="MODIFY">
+<H4><FONT SIZE=+1>M</FONT>ODIFYING
+<FONT SIZE=+1>T</FONT>HE
+<FONT SIZE=+1>B</FONT>INARIZATION 
+<FONT SIZE=+1>P</FONT>REPROCESSOR<FONT SIZE=+1>for</FONT>
+<FONT SIZE=+1>M</FONT>ULTI-<FONT SIZE=+1>H</FONT>EAD
+<FONT SIZE=+1>C</FONT>LAUSES
+</H4></B>
+
+The main difficulty comes from the fact that trying to directly
+access the continuation from `inside the continuation' creates a
+cyclic term. We have overcome this in the past by copying the
+continuation in BinProlog's blackboard (a permanent data area)
+but this operation was very expensive.
+<DD>
+The basic idea of the approach in this paper is inspired by
+`pushback lists' originally present in <A HREF="#f6">[COL78]</A> and other
+techniques used in logic grammars to simulate movement of constituents
+<A HREF="#f9">[DAHL89e]</A>. We will allow a <I> multiple head notation</I>
+as in:
+
+<PRE>
+  a,b,c:-d,e.
+</PRE>
+
+intended to give, via binarization:
+
+<PRE>
+  a(b(c(A))) :- d(e(A))
+</PRE>
+
+This suggests the following:
+<P>
+
+<B>Definition 3</B>
+<I> A multiheaded definite clause is a clause of the form:</I>
+
+<DD> A_1,A_2,..,A_m :- B_1,B_2,..,B_n.
+<P>
+<I> A multiheaded definite program is a set of multiheaded definite clauses.</I>
+<P>
+
+ Logically speaking, <B> ','/2</B> in 
+
+<DD> A_1,A_2,...,A_m :- B_1,B_2,...,B_n
+
+<P> is interpreted as conjunction on both sides.
+<DD>
+The reader familiar with grammar theory will notice
+(as suggested by <A HREF="#f13">[malu:pers1]</A>) that generalizing from definite
+to multi-headed definite programs is similar to going from
+context-free grammars to context-dependent grammars.
+<DD>
+The binarization of the head will be extended
+in a way similar to that of the binarization of the right side of a clause.
+<P>
+
+<B>Definition 4</B> 
+<I>Let P be  a multiheaded definite program  and \mf{Cont}  a  new
+variable.  Starting with the multiheaded clause</I>
+
+<DD><B>(C)</B>  A_1,A_2...,A_m :- B_1,B_2,...,B_n.<P>
+
+<I> we construct the clause</I><P>
+
+<DD><B>(C')</B> \psi(A_1,\psi(A_2,...,\psi(A_m,Cont))) :- \psi(B_1,\psi(B_2,...,\psi(B_n,Cont))).<P>
+<P>                         
+
+<DD>Note that after this transformation the binarized
+head will be able to match the initial segment of the
+current implicit goal stack of BinProlog embedded in the
+continuation, i.e. to look into the immediate future
+of the computation.
+
+Somewhat more difficult is to implement `meta-variables' in
+the left side. In the case of a goal like:
+
+<PRE>
+  a,Next:-write(Next),nl,b(Next).
+</PRE>
+
+we need a more complex binary form:
+
+<PRE>
+  a(A) :- strip_cont(A,B,C,write(B,nl(b(B,C)))).
+</PRE>
+
+where <B>strip_cont(GoalAndCont,Goal,Cont)</B> is needed to
+undo the binarization and give the illusion of getting the goal
+<B> Next</B> at source level by unification with a metavariable
+on the left side of the clause <B> a/1</B>.
+<DD>
+Notice that the semantics of the continuation manipulation
+predicate <B>strip_cont/3</B> is essentially first order, as
+we can think of <B>strip_cont</B> simply as being defined by
+a set of clauses like:
+
+<PRE>
+     ........
+     strip_cont(f(X1,...,Xn,C),f(X1,...,Xn),C).
+     ........
+</PRE>
+
+ for every functor <B>f</B> occuring in the program.
+
+The full code of the 
+preprocessor that handles multiples-headed clauses is given in
+<B>  Appendix A</B>.
+
+<P>
+<HR SIZE=4>
+
+<CENTER>
+<B><a name="PROGRAMMULTI-HEADED">
+<H3><FONT SIZE=+2>P</FONT>ROGRAMMING <FONT SIZE=+2>with</FONT>
+<FONT SIZE=+2>C</FONT>ONTINUATION<BR> <FONT SIZE=+2>in</FONT>
+<FONT SIZE=+2>M</FONT>ULTIPLE-<FONT SIZE=+2>H</FONT>EAD
+<FONT SIZE=+2>C</FONT>LAUSES</H3></B>
+</CENTER>
+
+
+The first question that comes to mind is how well our transformation
+technique
+performs compared with handwritten programs.
+<P>
+
+<B>Example 4</B>
+<I>The following program is a continuation based version
+of <B> nrev/2</B></I>.
+
+<PRE>app(Xs,Ys,Zs):-app_args(Xs,Zs),paste(Ys).
+
+app_args([],[X]),paste(X).
+app_args([A|Xs],[A|Zs]):-app_args(Xs,Zs).
+
+nrev([],[]).
+nrev([X|Xs],R):-
+  nrev1(Xs,R),
+  paste(X).
+
+nrev1(Xs,R):-
+  nrev(Xs,T),
+  app_args(T,R).
+</PRE>
+
+<I>which shows no loss in speed compared to the original program (530 KLIPS with BinProlog 2.20 on a Sparcstation 10-40).</I>
+<P>
+
+<DD>One of Miller's motivating examples
+for intuitionistic implication in \lambdaProlog</B><A HREF="#footnote3">(3)</A>,
+is the reverse predicate with intuitionistic implication.
+<p>
+
+<B>Example 5</B>
+<I>By using our multi-headed clauses
+we can write a such a reverse predicate as follows:</I>
+
+<PRE>
+  reverse(Xs,Ys):-rev(Xs,[]),result(Ys).
+
+    rev([],Ys), result(Ys).
+    rev([X|Xs],Ys):-rev(Xs,[X|Ys]).
+</PRE>
+
+<I> which gives after binarization:</I>
+
+<PRE>
+  reverse(Xs,Ys,Cont):-rev(Xs,[],result(Ys,Cont)).
+
+    rev([],Ys, result(Ys,Cont)) :- true(Cont).
+    rev([X|Xs],Ys,Cont):-rev(Xs,[X|Ys],Cont).
+</PRE>
+
+ <I>with a suitable definition for <B>true/1</B> as:</I>
+
+<PRE>
+    true(C):-C.
+</PRE>
+
+<I>and with a clause like</I>
+
+<PRE>
+    reverse(Xs,Ys):-reverse(Xs,Ys,true).
+</PRE>
+
+ Notice that such
+definitions are `virtual' (i.e. supplied by generic WAM-level
+operations) in BinProlog, for space and efficiency reasons
+<A HREF="#f23">[Tarau91:RU]</A>.
+<DD>
+By replacing <B>true(C):-C</B>
+an appropriate set of clauses where <B>C=p(X1,...,Xn)</B>
+for every head of clause
+<B>p/n</B> occurring in the program, we obtain
+a definite binary program which accurately
+describes the operational semantics of the original
+multi-headed program.
+<DD>
+Although the existence of such a translation is expected
+(as binary definite programs are Turing-equivalent) its
+simple syntactic nature rehabilitates the
+idea of using a <I> translation semantics</I> as an `internal' means
+to describe the semantics of multi-headed logic programs, despite
+the fact that it fixes <I> an implementation</I> as the
+<I> meaning</I> of a programming construct.
+<DD>
+The availability of such a programming style in the Horn subset
+of Prolog is also of practical
+importance as classical Prolog is
+still about 5-10 times faster than, for instance,
+the fastest known \lambdaProlog implementation 
+<A HREF="#f4">[Brisset92:these]</A>.
+<p>
+
+<B>Example 6</B>
+<i>The following program implements a <B> map</B> predicate with
+a Hilog-style (see <A HREF="#f5">[chen:warren:91:plilp]</A>) syntax:</i>
+
+<PRE>  cmap(F),i([]),o([]).
+  cmap(F),i([X|Xs]),o([Y|Ys]):-G=..[F,X,Y],G,cmap(F),i(Xs),o(Ys).
+
+  inc10(X,Y):-Y is X+10.
+
+  test:-cmap(inc10),i([1,2,3,4,5,6]),o(Xs),write(Xs),nl.
+</PRE>
+
+<DD>Some interesting optimization opportunities
+by program transformation can be obtained
+by using multiple-headed clauses, as can be seen in the
+following example of elimination of existential variables
+(this technique has been pioneered by Proietti and Pettorossi,
+in a fold/unfold based framework, <A HREF="#f19">[proietti91:plilp]</A>).
+<P>
+
+<B>Example 7</B>
+<I>Given the program:</I>
+
+<PRE>    r(X,Y):-p(X,N),q(N,Y).
+ 
+    p(a,1).    q(1,10).
+    p(b,2).    q(2,11).
+</PRE>
+
+ <I>we can rewrite it as:</I>
+
+<PRE>
+    r(X,Y):-p(X),result(Y).
+     
+    p(a) :-q(1).
+    p(b) :- q(2).
+
+    q(1), result(10).
+    q(2), result(11).
+</PRE>
+
+<I>which avoid passing unnecessary information by directly
+unifying the 2 occurrences of <B>result(_)</B>.</I>
+<P>
+
+<B>Example 8</B>
+<I>Multi-headed clauses
+can be used to ensure direct communication with the leafs
+of a tree (represented simply as a Prolog term).</I>
+
+<PRE>frontier(T,X):-leaf_var(T),result(X).
+
+leaf_var(X), result(X):- var(X).
+leaf_var(T) :- compound(T), T=..[_|Xs], member(X,Xs), leaf_var(X).
+</PRE>
+
+<I> where <B>?-frontier(X)</B> returns non-deterministically all
+the variables in a term seen as a (finite) tree.</I>
+<P>
+
+<DD>The example also shows that the technique
+scales easily to arbitrary recursive data-types, and to programs
+in practice beyond the domain of definite programs.
+<DD>  
+As it can be seen from the previous examples, the advantage of our
+technique is that the programmer can follow an intuitive, grammar-like
+semantics when dealing with continuations and that `predictability'
+of the fact that the continuation will be at the right place
+at the right time is straightforward.
+<DD>
+The <A HREF="#MULTIPLE-HEADED">Multiple Headed Clauses VS. Full-Blown Continuations</A> will show some special
+cases where full access to continuations is more convenient.
+
+<P>
+<HR SIZE=4>
+
+<CENTER>
+<B><a name="MULTIPLE-HEADED">
+<H3><FONT SIZE=+2>M</FONT>ULTIPLE <FONT SIZE=+2>H</FONT>EAD
+<FONT SIZE=+2>C</FONT>LAUSES<BR> <FONT SIZE=+2>VS</FONT>.
+<FONT SIZE=+2>F</FONT>ULL-<FONT SIZE=+2>B</FONT>LOWN
+<FONT SIZE=+2>C</FONT>ONTINUATIONS</H3></B>
+</CENTER>
+
+BinProlog 2.20 supports direct manipulation of binary clauses
+denoted 
+
+<PRE>
+   Head ::- Body.
+</PRE>
+
+ They give full power to the knowledgeable programmer on
+the future of the computation. Note that such a facility is not
+available in conventional WAM-based systems where continuations
+are not first-order objects.
+<P>
+
+<B>Example 9</B>
+<I>We can use them to write programs like:</I>
+
+<PRE>  member_cont(X,Cont)::-
+    strip_cont(Cont,X,NewCont,true(NewCont)).
+  member_cont(X,Cont)::-
+    strip_cont(Cont,_,NewCont,member_cont(X,NewCont)).
+
+  test(X):-member_cont(X),a,b,c.
+</PRE>
+
+<I> A query like</I>
+<PRE>
+  ?-test(X).
+</PRE>
+
+<I> will return <B>X=a; X=b; X=c; X=</B>whatever follows from the calling point of <B>test(X)</B>. </I>
+
+<PRE>
+catch(Goal,Name,Cont)::-
+   lval(catch_throw,Name,Cont,call(Goal,Cont)).
+
+throw(Name,_)::-
+   lval(catch_throw,Name,Cont,nonvar(Cont,Cont)).
+</PRE>
+
+<I>where <B>lval(K1,K2,Val)</B> is  a BinProlog
+primitive which unifies <B>Val</B> with a backtrackable global logical
+variable accessed by hashing on two (constant or variable) 
+keys <B>K1,K2</B>.</I>
+<P>
+
+<B>Example 10</B>
+<I>This allows for instance to avoid execution of the infinite <B>loop</B>
+from inside the predicate <B>b/1</B>.</I>
+
+<PRE>
+loop:-loop.
+
+c(X):-b(X),loop.
+
+b(hello):-throw(here).
+b(bye).
+
+go:-catch(c(X),here),write(X),nl.
+</PRE>
+<P>
+
+<DD>Notice that due to our translation semantics this program
+still has a first order reading and that BinProlog's <B>lval/3</B>
+is not essential as it can be emulated by an extra argument passed
+to all predicates.
+<DD>
+Although implementation of <B>catch</B> and <B>throw</B> requires full-blown
+continuations, we can see that at user level, the multi-headed
+clause notation is enough.
+
+<P>
+<HR SIZE=4>
+
+<CENTER>
+<B><a name="CONTGRAM">
+<H3>
+<FONT SIZE=+2>C</FONT>ONTINUATION
+<FONT SIZE=+2>P</FONT>ROGRAMS</H3></B>
+</CENTER>
+
+By allowing us to see the right context of a given grammar symbol,
+continuations can make logic grammars both more efficient and simpler, as
+well as provide several sophisticated capabilities within a simple
+framework. We next discuss some of these capabilities.
+
+<P>
+<HR SIZE=4>
+
+<B><a name="STRATEVERSA">
+<H4><FONT SIZE=+1>P</FONT>ARSING
+<FONT SIZE=+1>S</FONT>TRATEGY
+<FONT SIZE=+1>V</FONT>ERSATILITY</H4></B>
+
+Changing parsing strategies is usually deemed to require a different
+parser. We now discuss how we can effect these changes with no more
+apparatus than continuation grammars.
+
+Take for instance the noun phrase "Peter, Paul and Mary". We can
+first use a tokenizer which transforms it into the sequence
+<P>
+
+<B>Example 11</B>
+<PRE>  (noun('Peter'), comma, noun('Paul'), and, noun('Mary'))</PRE>
+
+<I> and then use this sequence to define the rule for list-of-names in the following continuation grammar:</I>
+
+<PRE>names  --> noun('Peter'), comma, noun('Paul'), and, noun('Mary').
+
+noun(X), comma --> [X,','].
+noun(X), and, noun(Last) --> [X,'and',Last].
+</PRE>
+
+ This is an interesting way in which to implement bottom-up parsing of recursive structures, since no recursive rules are needed, yet the parser will work on lists of names of any length. It is moreover quite efficient, there being no backtracking. It can also be used in a mixed strategy, for instance we could add the rules:
+
+<PRE>verb_phrase --> verb.
+verb --> [sing].
+</PRE>
+
+and postulate the existence of a verb phrase following the list of nouns, which would then be parsed top-down. The modified rules follow, in which we add a marker to record that we have just parsed a noun phrase, and then we look for a verb phrase that follows it.
+
+<PRE>noun(X), comma --> [X,','].
+noun(X), and, noun(Last) --> [X,'and',Last], parsed_noun_phrase.
+		  
+parsed_noun_phrase --> verb_phrase. 
+</PRE>
+
+ DCGs allow further left-hand side symbols provided they are terminal ones  (it has been shown that rules with non-leading non-terminal left hand side symbols can be replaced by a set of equivalent, conforming rules 
+<A HREF="#f6">[COL78]</A>). However, because their implementation is based on synthesizing those extra symbols into the strings being manipulated, lookahead is simulated by creating the expectation of finding a given symbol in the future, rather than
+by actually finding it right away.
+<DD>
+With continuations we can implement a more restricted but more efficient version of multiple-left-hand-side symbol-accepting DCGs, which we shall call 
+<I>continuation grammars</I>. It is more restricted in the sense that the context that an initial left-hand side symbol is allowed to look at is strictly its right-hand side sisters, rather than any descendants of them, but by using this immediate context right away the amount of backtracking is reduced for many interesting kinds of problems. 
+<P>
+
+<B>Example 12</B>
+<I>For comparison with the length of code, here is a non-continuation based DCG formulation of the "list of names" example which allows for multiple left-hand side symbols</B><A HREF="#footnote4">(4)</A>
+
+<PRE>names --> start, start(C), name, end(C), nms, end.
+
+nms --> [].
+nms --> start(C), name, end(C), nms.
+</PRE>
+
+<I>The next two rules are for terminalizing symbols that appear in later rules as non-leading left-hand-side symbols.</I> 
+
+<PRE>end --> [end].
+start(C) --> [start(C)].
+
+start, [end] --> []
+start, [start(C)] --> [].
+
+end(and), end --> [,].
+end(comma), start(and) --> [and].
+end(comma), start(comma) --> [,].
+</PRE>
+  
+Other possible applications are to procedures to read a word or a sentence, which typically make explicit use of a lookahead character or word, to restrictive relative clauses, whose end could be detected by looking ahead for the comma that ends them, etc. 
+
+<P>
+<HR SIZE=4>
+
+<B><a name="LONG-DIST">
+<H4><FONT SIZE=+1>R</FONT>ELATING
+<FONT SIZE=+1>of</FONT>
+<FONT SIZE=+1>L</FONT>ONG-<FONT SIZE=+1>D</FONT>ISTANCE
+<FONT SIZE=+1>C</FONT>ONSTITUENTS</H4></B>
+
+One important application in computational linguistics is that of describing movement of constituents. For instance, a common linguistic analysis would state that the object noun phrase in "Jack built the house" moves to the front through relativization, as in "the house that Jack built", and leaves a trace behind in the phrase structure representing the sentence.  For describing movement, we introduce the possibility of writing one meta-variable in the left hand side of continuation grammar rules. Then our example can be handled through a rule such as the following:
+
+<PRE>  relative_pronoun, X, trace --> [that], X.
+</PRE>
+
+This rule accounts, for instance, for ``the house that jack built", ``the house that the Prime Minister built", ``the house that the man with the yellow hat who adopted curious George built", and so on. A simple grammar
+containing a similar rule follows, the reader might try it to derive: "The 
+elephant that Jill photographed smiles":
+<P>
+
+<B>Example 13</B>
+<PRE>sentence --> noun_phrase,verb_phrase.
+
+noun_phrase --> proper_name.
+noun_phrase --> det, noun, relative.
+noun_phrase --> trace.
+
+verb_phrase --> verb, noun_phrase.
+verb_phrase --> verb.
+
+relative --> [].
+relative --> relative_marker, sentence.
+
+relative_marker, X, trace --> relative_pronoun, X.
+
+det --> [the].
+
+noun --> [elephant].
+
+relative_pronoun --> [that].
+
+proper_name --> ['Jill'].
+
+verb --> [photographed].
+verb --> [smiles].
+</PRE>
+
+<DD>What is noteworthy about this example is that it shows how to use plain Prolog 
+plus binarization to achieve the same expressive power which used to require
+ more sophisticated grammar formalisms, such as Extraposition  or
+Discontinuous Grammars <A HREF="#f17">[Pereira:XG]</A>,
+<A HREF="#f9">[DAHL89e]</A>.
+
+<P>
+<HR SIZE=4>
+
+<B><a name="COMPVIEW">
+<H4><FONT SIZE=+1>C</FONT>OMPUTATION
+<FONT SIZE=+1>V</FONT>IEWED <FONT SIZE=+1>as</FONT> 
+<FONT SIZE=+1>P</FONT>ARSING</H4></B>
+
+Continuation Grammars are useful not only for linguistic or intrinsically
+grammatical examples, but can also serve to simplify the description of
+many problems which can be formulated in terms of a grammar. 
+<P>
+
+<B>Example 14</B>
+<I>For instance, we can
+sort a list of numbers by viewing it as an input string to a grammar, which
+obtains successive intermediate strings in a parallel-like fashion until
+two successively obtained strings are the same:</I>  
+
+<PRE>sort(Input):- s(V,V,Input,[]), remember(Input).
+
+s(H,[Y,X|Z]) --> [X,Y], {X>Y}, !, s(H,Z).
+s(H,[X|Z]) --> [X], s(H,Z).
+s(NewString,[]), {remember(OldString)} -->
+  {decide(OldString,NewString)}.
+
+decide(Result,Result),output(Result).
+decide(OldString,NewString):- sort(NewString).
+
+par_sort(Input,Result):-sort(Input),output(Result).
+</PRE>
+
+ The first clause initializes a difference-list as empty (both the head and tail are represented by a variable V); adds the two extra arguments (input string
+and output string) that are typically needed
+by the Prolog translation of the grammar rules; and pastes a reminder of the 
+last string 
+obtained (initially, the input string).
+<DD>
+The first grammar rule consumes the next two numbers from the input string if
+they are unordered, and calls s recursively, keeping track of their ordered 
+version in the difference
+list represented by the two first arguments of s.
+<DD>
+If the next two numbers to be consumed are not ordered, or if there is only
+one number left, the second grammar rule consumes one number, and keeps track
+ of it
+in the difference list as it recursively calls s.
+<DD>
+The third grammar rule finds no more numbers to consume, so it consults the
+last string remembered in order to decide whether to print the result (if the
+new string is no different than the last one) or to start another iteration
+of the algorithm on the list last obtained.
+<DD>
+The last clause returns the answer directly from the continuation.
+For instance, on the input string <B>L=[8,4,5,3]</B> with the goal <B>par_sort(L,R)</B>,
+we successively obtain: <B>[4,8,3,5]</B>,
+<B>[4,3,8,5]</B> and finally <B>R=[3,4,5,8].</B>
+ <DD> 
+The above  example 
+is a variation of the odd-even-transposition parallel algorithm for
+ sorting  numbers <A HREF="#f1">[Akl]</A>. A grammatical version of this algorithm has been
+developed in terms of parametric L-systems <A HREF="#f20">[Prus]</A>, an extension of
+L-systems which operates on parametric words and which can be viewed as a model of  parallel computation. It is interesting to note that by using continuation 
+grammars we need no special formalisms to obtain the kind of parallel
+computation that is provided by more elaborate formalisms such as parametric
+ L-systems.
+
+<P>
+<HR SIZE=4>
+
+<CENTER>
+<B><a name="CONCLU">
+<H3><FONT SIZE=+2>C</FONT>ONCLUSION</H3></B>
+</CENTER>
+
+We have proposed the use of continuation-passing binarization both for extending logic programs to allow multiple heads, and for a fresh view of those logic grammars which allow multiple left-hand-side symbols. In both of these areas, the use of continuations has invited interesting new programming (grammar) composition techniques which we have provided examples for.  
+<DD>
+Other logic programming proposals involve multiple heads, e.g. disjunctive
+logic programming <A HREF="#f12">[LoboMR89]</A>,<A HREF="#f21">[ReedLSSLP91]</A> or contextual
+logic programming <A HREF="#f16">[MonteiroP89]</A>,<A HREF="#f10">[JacquetM90]</A>.
+However, in these approaches the notion of alternative conclusions
+is paramount, whereas in our approach we instead stress the notion of
+contiguity that computational linguistics work has inspired. A formal
+characterization of this stress with respect to logic grammars has been
+given in <A HREF="#f3">[ADP91]</A>. 
+<DD>
+The technique has been included as a standard feature
+of the BinProlog 2.20 distribution
+available by ftp from clement.info.umoncton.ca.
+
+<P>
+<HR SIZE=4>
+
+<CENTER>
+<B><a name="ACKNOWLEDG">
+<H3><FONT SIZE=+2>A</FONT>CKNOWLEDGMENT</H3></B>
+</CENTER>
+
+This research was supported by NSERC Operating grant 31-611024, and by an NSERC Infrastructure and Equipment grant given to the Logic and Functional Programming Laboratory at SFU, in whose facilities this work was developed. We are also grateful to the Centre for Systems Science, LCCR and the Department of Computing Sciences at Simon Fraser University for the use of their facilities. Paul Tarau thanks also for support from the Canadian National Science and Engineering Research Council (Operating grant OGP0107411) 
+and a grant from the FESR of the Universit\'{e} de Moncton.
+
+<P>
+<HR SIZE=4>
+
+<CENTER>
+<B><a name="REFS">
+<H3><FONT SIZE=+2>R</FONT>EFERENCES</H3></B>
+</CENTER>
+
+<P>
+<DL>
+<DT>
+<B><a name="f1">[Akl]</B>  S. Akl.
+<dd><I> The design and analysis of parallel algorithms</I>.
+ Prentice Hall, Englewood Cliffs, 1989.
+
+<P>
+<DT>
+<B><a name="f2">[andreoli:linear:iclp:90]</B>  J.-M. Andreoli and R. Pareschi.
+<DD>Linear objects: Logical processes with built-in inheritance.
+In D. Warren and P. Szeredi, editors, <I> 7th Int. Conf. Logic
+Programming</I>, Jerusalem, Israel, 1990. MIT Press.
+
+<P>
+<DT>
+<B><a name="f3">[ADP91]</B>  J. Andrews, V. Dahl, and F. Popowich.
+<DD>A Relevance Logic Characterization of Static Discontinuity Grammars.
+Technical report, CSS/LCCR TR 91-12, Simon Fraser University, 1991.
+
+<P>
+<DT>
+<B><a name="f4">[Brisset92:these]</B>  P. Brisset.
+<dd>Compilation de \lambdaProlog.
+These, Universite de Rennes I, 1992.
+
+<P>
+<DT>
+<B><a name="f5">[chen:warren:91:plilp]</B>  W. Chen and D. S. Warren.
+<DD>Compilation of predicate abstractions in higher-order logic
+  programming.
+In J.Maluszy'nski and M. Wirsing, editors, <I> Proceedings of
+  the 3rd Int. Symposium on Programming Language Implementation and Logic
+  Programming, PLILP91, Passau, Germany</I>, number 528 in Lecture Notes in
+  Computer Science, pages 287--298. Springer Verlag, Aug. 1991.
+
+<P>
+<DT>
+<B><a name="f6">[COL78]</B>  A. Colmerauer.
+<DD><I> Metamorphosis Grammars</I>, volume~63, pages 133--189.
+ Springer-Verlag, 1978.
+
+<P>
+<DT>
+<B><a name="f7">[jlp23]</B>  A. Colmerauer, H. Kanoui, R. Pasero, and P. Roussel.
+<DD>Un systeme de communication homme-machine en francais.
+Technical report, Groupe d'Intelligence Artificielle, Universite
+d'Aix-Marseille II, Marseille, 1973.
+
+<P>
+<DT>
+<B><a name="f8">[DAHL81]</B>  V. Dahl.
+<DD>Translating spanish into logic through logic.
+ <I> American Journal of Computational Linguistics</I>, 13:149--164, 1981.
+
+<P>
+<DT>
+<B><a name="f9">[DAHL89e]</B>  V. Dahl.
+<DD>Discontinuous grammars.<I> Computational Intelligence</I>, 
+5(4):161--179, 1989.
+
+<P>
+<DT>
+<B><a name="f10">[JacquetM90]</B>  J.-M. Jacquet and L. Monteiro.
+<DD>Comparative semantics for a parallel contextual logic programming
+  language.
+In S. Debray and M. Hermenegildo, editors, <I> Proceedings of the
+  1990 North American Conference on Logic Programming</I>, pages 195--214,
+  Cambridge, Massachusetts London, England, 1990. MIT Press.
+
+<P>
+<DT>
+<B><a name="f11">[LL87]</B>  J. W. Lloyd.
+<DD><I> Foundations of Logic Programming</I>. Springer-Verlag, 1987.
+
+<P>
+<DT>
+<B><a name="f12">[LoboMR89]</B>  J. Lobo, J. Minker, and A. Rajasekar.
+<DD> Extending the semantics of logic programs to disjunctive logic
+  programs.
+In G. Levi and M. Martelli, editors, <I> Proceedings of the Sixth
+  International Conference on Logic Programming</I>, pages 255--267, Cambridge,
+  Massachusetts London, England, 1989. MIT Press.
+
+<P>
+<DT>
+<B><a name="f13">[malu:pers1]</B>  J. Maluszy'nski.
+<DD> On the relationship between context-dependent grammars and
+  multi-headed clauses., June 1994.
+<DD>Personal Communication.
+
+<P>
+<DT>
+<B><a name="f14">[miller:lprolog]</B>  D. Miller.
+<DD>A logic programming language with lambda-abstraction, function
+  variables, and simple unification.
+ <I> J. Logic and Computation</I>, 1(4):497--536, 1991.
+
+<P>
+<DT>
+<B><a name="f15">[Miller89Lex]</B>  D. A. Miller.
+<DD> Lexical scoping as universal quantification.
+In G. Levi and M. Martelli, editors, <I> Proceedings of the Sixth
+  International Conference on Logic Programming</I>, pages 268--283, Cambridge,
+  Massachusetts London, England, 1989. MIT Press.
+
+<P>
+<DT>
+<B><a name="f16">[MonteiroP89]</B>  L. Monteiro and A.~Porto.
+<DD>Contextual logic programming. In G. Levi and M. Martelli, editors,
+ <I> Proceedings of the Sixth
+  International Conference on Logic Programming</I>, pages 284--299, Cambridge,
+  Massachusetts London, England, 1989. MIT Press.
+
+<P>
+<DT>
+<B><a name="f17">[Pereira:XG]</B>  F. Pereira.
+<DD> Extraposition grammars.
+ <I> American Journal for Computational Linguistics</I>, 7:243--256, 1981.
+
+<P>
+<DT>
+<B><a name="f18">[proietti:pers1]</B>  M. Proietti.
+<DD>On the definition of binarization in terms of fold/unfold., June 1994.
+Personal Communication.
+
+<P>
+<DT>
+<B><a name="f19">[proietti91:plilp]</B>  M. Proietti and A. Pettorossi.
+<DD> Unfolding-definition-folding, in this order, for avoiding unnecessary
+  variables in logic programs. In J. Maluszy'nski and M. Wirsing, editors, 
+<I> Proceedings of
+  the 3rd Int. Symposium on Programming Language Implementation and Logic
+  Programming, PLILP91, Passau, Germany</I>, number 528 in Lecture Notes in
+  Computer Science, pages 347--358. Springer Verlag, Aug. 1991.
+
+<P>
+<DT>
+<B><a name="f20">[Prus]</B>  P. Prusinkiewicz and J. Hanan.
+<DD><I> L-systems: from formalism to programming languages</I>.
+Springer-Verlag, 1992.
+
+<P>
+<DT>
+<B><a name="f21">[ReedLSSLP91]</B>  D. W. Reed, D. W. Loveland, and B. T. Smith.
+<DD>An alternative characterization of disjunctive logic programs.
+In V.~Saraswat and K.~Ueda, editors, <I> Logic Programming
+  Proceedings of the 1991 International Symposium</I>, pages 54--70, Cambridge,
+  Massachusetts London, England, 1991. MIT Press.
+
+<P>
+<DT>
+<B><a name="f22">[Stoy77]</B>  J. Stoy.
+<DD><I> Denotational Semantics: the Scott-Strachey Approach to
+  Programming Language Theory</I>.
+Cambridge, MA. The MIT Press, 1977.
+
+<P>
+<DT>
+<B><a name="f23">[Tarau91:RU]</B>  P. Tarau.
+<DD>Program  Transformations and  WAM-support for the  Compilation
+  of Definite Metaprograms.
+In A. Voronkov, editor, <I> Logic Programming, RCLP Proceedings</I>,
+  number 592 in Lecture Notes in Artificial Intelligence, pages 462--473,
+  Berlin, Heidelberg, 1992. Springer-Verlag.
+
+<P>
+<DT>
+<B><a name="f24">[Tarau90:PLILP]</B>  P. Tarau and M. Boyer.
+<DD>Elementary Logic Programs.
+In P. Deransart and J. Maluszy'nski, editors, <I> Proceedings
+ of Programming Language Implementation and Logic Programming</I>, 
+number 456 in Lecture Notes in Computer Science, pages 159--173. 
+Springer, Aug. 1990.
+
+<P>
+<DT>
+<B><a name="f25">[pt93b]</B>  P. Tarau and K. De~Bosschere.
+<DD> Memoing with Abstract Answers and Delphi Lemmas.
+In Y. Deville, editor, <I> Logic Program Synthesis and
+  Transformation</I>, Springer-Verlag, Workshops in Computing, 
+Louvain-la-Neuve, July 1993.
+
+<P>
+<DT>
+<B><a name="f26">[wadler93:cont]</B>  P. Wadler.
+<DD>Monads and composable continuations.
+<I> Lisp and Symbolic Computation</I>, pages 1--17, 1993.
+
+<P>
+<DT>
+<B><a name="f27">[WAND80]</B>  M. Wand.
+<DD>Continuation-based program transformation strategies.
+ <I> Journal of the Association for Computing Machinery</I>,
+  27(1):164--180, 1980.
+
+<P>
+<DT>
+<B><a name="f28">[Warren82]</B>  D. H. D. Warren.
+<DD> Higher-order extensions to Prolog -- are they needed?
+In D. Michie, J. Hayes, and Y. H. Pao, editors, <I> Machine
+  Intelligence 10</I>. Ellis Horwood, 1981.
+
+<P>
+<DT>
+<B><a name="f29">[WarrenXOLDT]</B>  D. S. Warren.
+<DD>The XOLDT System.
+Technical report, SUNY Stony Brook, electronic document: ftp
+ sbcs.sunysb.edu, 1992.
+</DL>
+
+<P>
+<HR SIZE=4>
+
+<CENTER>
+<B><a name="APPENDIX">
+<H3><FONT SIZE=+2>A</FONT>PPENDIX 
+<FONT SIZE=+2>A</FONT></H3></B>
+</CENTER>
+
+<PRE>
+% converts a multiple-head clause to its binary equivalent
+def_to_mbin((H:-B),M):-!,def_to_mbin0(H,B,M).
+def_to_mbin(H,M):-def_to_mbin0(H,true,M).
+
+def_to_mbin0((H,Upper),B,(HC:-BC)) :- nonvar(H),!,
+  termcat(H,ContH,HC),
+  add_upper_cont(B,Upper,ContH,BC).
+def_to_mbin0(H,B,(HC:-BC)) :- !,
+  termcat(H,Cont,HC), 
+  add_cont(B,Cont,BC).		
+
+add_upper_cont(B,Upper,ContH,BC):-nonvar(Upper),!,
+  add_cont(Upper,ContU,ContH),
+  add_cont(B,ContU,BC).
+add_upper_cont(B,Upper,ContH,BC):-
+  add_cont((strip_cont(ContH,Upper,ContU),B),ContU,BC).
+
+% adds a continuation to a term
+
+add_cont((true,Gs),C,GC):-!,add_cont(Gs,C,GC).
+add_cont((fail,_),C,fail(C)):-!.
+add_cont((G,Gs1),C,GC):-!,
+  add_cont(Gs1,C,Gs2),
+  termcat(G,Gs2,GC).
+add_cont(G,C,GC):-termcat(G,C,GC).
+
+strip_cont(TC,T,C):-TC=..LC,append(L,[C],LC),!,T=..L.
+
+</PRE>
+
+ The predicate termcat(Term,Cont,TermAndCont) is a BinProlog builtin
+which works as if defined by the following clause:
+
+<PRE>
+  termcat(T,C,TC):-T=..LT,append(LT,[C],LTC),!,TC=..LTC.
+</PRE>
+
+
+<P>
+<HR SIZE=4>
+
+<P>
+<DD>
+<h5><B><a name="footnote3">(3)</B>
+where for instance <B>insert X Xs Ys</B> means
+<B>insert(X,Xs,Ys)</B> in curried notation</h5>
+
+<P>
+<DD>
+<h5><B><a name="footnote2">(2)</B>Atom or term.</h5> 
+
+<P>
+<DD>
+<h5><B><a name="footnote3">(3)</B>Which is, by the way, a motivating example also for Andreoli and Pareschi's Linear Objects,
+<A HREF="#f2">[andreoli:linear:iclp:90]</A>
+
+<P>
+<DD>
+<h5><B><a name="footnote4">(4)</B>
+This is a simplified version of the corresponding code fragment in <A HREF="#f8">[DAHL81]</A>.</h5>

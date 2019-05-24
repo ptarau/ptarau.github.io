@@ -1,0 +1,153 @@
+<!DOCTYPE HTML PUBLIC "-//IETF//DTD HTML 2.0//EN">
+<!--Converted with LaTeX2HTML .95.3 (Nov 17 1995) by Nikos Drakos (nikos@cbl.leeds.ac.uk), CBLU, University of Leeds -->
+<HTML>
+<HEAD>
+<TITLE>Logic Programming Tools for Advanced Internet Programming</TITLE>
+
+<meta name="description" value="No Title">
+<meta name="keywords" value="html">
+<meta name="resource-type" value="document">
+<meta name="distribution" value="global">
+<LINK REL=STYLESHEET HREF="html.css">
+</HEAD>
+<BODY bgcolor=white LANG="EN">
+
+<P><center>
+<h1>Logic Programming Tools for Advanced Internet Programming</h1>
+</center>
+<P>
+<BR>
+<BR>
+<P>
+<a href="http://clement.info.umoncton.ca/~tarau"><B>Paul Tarau</B></a><BR>
+ Universit&#233; de Moncton<BR>
+    D&#233;partement d'Informatique<BR>
+    Moncton, N.B.  Canada E1A 3E9,<BR>
+    tarau@info.umoncton.ca<BR>
+<BR>
+<P>
+<B>Abstract</B>
+<P>
+The tutorial is intended to introduce logic programmers to advanced
+Internet programming. Our tools, encapsulated in a small set of very
+high-level primitives, will enable the participants to program basic
+client-server applications in a few lines of code, interact with http
+servers and Java applets, and put on the Web their favorite programs.
+<P>
+The tutorial also gives a glimpse on mobile code and
+multi-agent programming with special emphasis on using essential Prolog
+features like meta-programming  
+to implement complex remote execution
+mechanisms, while language extensions like hypothetical assumptions and
+Linda coordination primitives are used to elegantly deal with the
+complexities of network and agent programming, at a very high level. 
+Mobile threads are implemented by capturing 
+first order continuations
+in a compact data structure sent over the network.
+Code is fetched lazily from its original base turned into a server
+as the continuation executes at the remote site.
+Combined with a dynamic recompilation scheme
+ensuring that heavily used code moves up smoothly in a speed
+hierarchy, our techniques are shown to be
+an effective means for implementing mobile agents in a natural
+programming style.
+<P>
+We will also describe our experience with building a comprehensive
+Internet programming infrastructure [<A HREF="html.html#TDBwetice97">3</A>]
+on top of <B>BinProlog</B> [<A HREF="html.html#Tarau97BinProlog">2</A>]
+and its Java peer - a multithreaded unification based Linda
+client and server, using Prolog terms and unification
+for associative search.
+<P>
+Among the applications, we review 
+LogiMOO[<A HREF="html.html#lpnet96virtual">5</A>, <A HREF="html.html#TDRB97chi">4</A>], 
+a shared multi-user virtual world prototype 
+with a controlled natural language interface,
+executing under Java and VRML enabled browsers like Netscape
+Communicator.
+<P>
+The tutorial is organized around a set of ``how to do it'' examples,
+among which the following:
+<P>
+
+<UL><LI> simple CGI-scripts, client-server applications on the WWW
+<LI> a multi-user chat program
+<LI> an applet: from Prolog to Java and back
+<LI> distributed programming with BinProlog engines and threads
+<LI> mobile code: ``take the continuation and run''
+<LI> LogiMOO: crafting shared virtual objects on the Web
+<LI> Talking to VRML: BinProlog-driven 3D-avatar animation
+</UL>
+
+<P>
+We conclude with an analysis of the practical application development
+and promising future directions of work.
+With the paradigm shift to highly inter-connected computers and programming
+tools, logic programming languages have a unique opportunity to contribute
+to practical Internet application development. Simplicity, robustness, 
+automatic memory management,
+code and object mobility
+[<A HREF="html.html#migratory">1</A>]
+are among the
+features some LP languages [<A HREF="html.html#DOZmobs">6</A>, <A HREF="html.html#TDBwetice97">3</A>]
+share with emerging tools like Java. Superior
+meta-programming and high-level networking, built-in
+grammars and dynamic databases, 
+declarative semantics are among their
+competitive advantages.
+In this context, we discuss some strategies about how to integrate
+this technology in the (real!) world of software development.
+<P>
+<P><A NAME="SECTIONREF"><H2>References</H2></A><P>
+<DL COMPACT>
+<DT><A NAME="migratory"><STRONG>1</STRONG></A><DD>
+K. A. Bharat and L. Cardelli.
+Migratory applications.
+In <EM>Proceedings of the 8th Annual ACM Symposium on User
+  Interface Software and Technology</EM>, Nov. 1995.
+<P>
+  http://gatekeeper.dec.com/pub/DEC/SRC/research-reports/abstracts/src-rr-138.html.
+<P>
+<DT><A NAME="Tarau97BinProlog"><STRONG>2</STRONG></A><DD>
+P. Tarau.
+BinProlog 5.75 User Guide.
+Technical Report 97-1, D&#233;partement d'Informatique, Universit&#233;
+  de Moncton, Apr. 1997.
+Available from <EM>http://clement.info.umoncton.ca/BinProlog</EM>.
+<P>
+<DT><A NAME="TDBwetice97"><STRONG>3</STRONG></A><DD>
+P. Tarau, V. Dahl, and K. De Bosschere.
+A Logic Programming Infrastructure for Remote Execution,
+  Mobile Code and Agents.
+In <EM>Proceedings of IEEE WETICE'97</EM>, Boston, MA, June 1997.
+<P>
+<DT><A NAME="TDRB97chi"><STRONG>4</STRONG></A><DD>
+P. Tarau, V. Dahl, S. Rochefort, and K. De Bosschere.
+LogiMOO: a Multi-User Virtual World with Agents and
+  Natural Language Programming.
+In S. Pemberton, editor, <EM>Proceedings of CHI'97</EM>, pages 323-324,
+  Mar. 1997.
+ACM ISBN 0-8979-926-2.
+<P>
+<DT><A NAME="lpnet96virtual"><STRONG>5</STRONG></A><DD>
+P. Tarau and K. De Bosschere.
+Virtual World Brokerage with BinProlog and Netscape.
+In P. Tarau, A. Davison, K. De Bosschere, and M. Hermenegildo,
+  editors, <EM>Proceedings of the 1st Workshop on Logic Programming Tools for
+  INTERNET Applications</EM>, JICSLP'96, Bonn, Sept. 1996.
+http://clement.info.umoncton.ca/ lpnet.
+<P>
+<DT><A NAME="DOZmobs"><STRONG>6</STRONG></A><DD>
+P. Van Roy, S. Haridi, P. Brand, G. Smolka, M. Mehl, and R. Scheidhouer.
+Mobile Objects in Distributed Oz.
+<EM>ACM TOPLAS</EM>, 1997.
+to appear.
+</DL>
+<P>
+<BR> <HR>
+<P><ADDRESS>
+<I>Paul Tarau <BR>
+Tue Sep  2 21:18:18 ADT 1997</I>
+</ADDRESS>
+</BODY>
+</HTML>

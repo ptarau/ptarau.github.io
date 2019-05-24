@@ -1,0 +1,124 @@
+\begin{thebibliography}{AKBLN89}
+
+\bibitem[AD89]{DA89NSERC}
+H.~Abramson and V.~Dahl.
+\newblock {\em Logic Grammars}.
+\newblock Symbolic Computation AI Series. Springer-Verlag, 1989.
+
+\bibitem[AKBLN89]{Ait-Kaci89}
+H.~A{\"{\i}}t-Kaci, R.~Boyer, P.~Lincoln, and R.~Nasr.
+\newblock Efficient implementation of lattice operations.
+\newblock {\em ACM Transactions on Programming Languages}, 11(1):115--146,
+  1989.
+
+\bibitem[AKP93]{Ait-Kaci93}
+H.~A{\"{\i}}t-Kaci and A.~Podelski.
+\newblock Towards a meaning of {LIFE}.
+\newblock {\em Journal of Logic Programming}, 16(3/4):195, 1993.
+
+\bibitem[Ash93]{Asher93}
+N.~Asher.
+\newblock {\em Reference to Abstract Objects in Discourse}, volume~50 of {\em
+  Studies in Linguistics and Philosophy}.
+\newblock Kluwer, 1993.
+
+\bibitem[Car92]{Carp92}
+B.~Carpenter.
+\newblock {\em The Logic of Typed Feature Structures}.
+\newblock Cambridge University Press, London, England, 1992.
+
+\bibitem[CD95]{CodDiaz:ICLP95}
+Philippe Codognet and Daniel Diaz.
+\newblock Compiling {P}rolog to {C} : the {WAMCC} system.
+\newblock In {\em Proceedings of the 12-th International Conference on Logic
+  Programming}, Yokohama, Japan, 1995. The MIT Press.
+
+\bibitem[Dah91]{Dahl91}
+V.~Dahl.
+\newblock Incomplete types for logic databases.
+\newblock {\em Applied Mathematical Letters.}, 4(3):25--28, 1991.
+
+\bibitem[Fal94]{Fall94}
+A.~Fall.
+\newblock The foundations of taxonomic encoding.
+\newblock {\em Submitted to ACM Transactions on Programming Languages. Also
+  available as Simon Fraser Universtity Technical Report SFU LCCR TR 94-20},
+  1994.
+
+\bibitem[Fal95]{Fall95a}
+A.~Fall.
+\newblock Sparse logical terms.
+\newblock {\em To appear in Applied Mathematics Letters.}, 1995.
+
+\bibitem[FDT95]{Fall95b}
+A.~Fall, V.~Dahl, and P.~Tarau.
+\newblock Resolving co-specification in contexts.
+\newblock In {\em Proc. of IJCAI Workshop on Context in Natural Language
+  Processing}, Montreal, Canada, 1995.
+
+\bibitem[HM92]{jlp44}
+J.~Hodas and D.~Miller.
+\newblock Logic programming in a fragment of intuitionistic linear logic.
+\newblock {\em Journal of Information and Computation}, 1992.
+
+\bibitem[Hob86]{Hobbs86}
+J.~Hobbs.
+\newblock Resolving pronoun references.
+\newblock In {\em Readings in Natural Language Processing}, pages 339--352.
+  Morgan Kaufmann Publishers, Inc., 1986.
+
+\bibitem[Hod92a]{Hodas92}
+J.~Hodas.
+\newblock {S}pecifying {F}iller-{G}ap {D}ependency {P}arsers in a
+  {L}inear-{L}ogic {P}rogramming {L}anguage.
+\newblock In Krzysztof Apt, editor, {\em {L}ogic {P}rogramming {P}roceedings of
+  the {J}oint {I}nternational {C}onference and {S}ymposium on {L}ogic
+  programming}, pages 622--636, Cambridge, Massachusetts London, England, 1992.
+  MIT Press.
+
+\bibitem[Hod92b]{jlp43}
+J~Hodas.
+\newblock Specifying {F}iller-{G}ap {D}ependency {P}arsers in a {L}inear
+  {L}ogic {P}rogramming {L}anguage.
+\newblock In Krzysztof Apt, editor, {\em Proc. 1992 Joint International
+  Conference and Symposium on Logic Programming}, pages 622--636. MIT Press,
+  1992.
+
+\bibitem[PM90]{pareschi:extending:iclp:90}
+R.~Pareschi and D.A. Miller.
+\newblock Extending definite clause grammars with scoping constructs.
+\newblock In D.H.D. Warren and P.~Szeredi, editors, {\em 7th Int. Conf. Logic
+  Programming}, pages 373--389, Jerusalem, Israel, 1990. MIT Press.
+
+\bibitem[PS87]{PS87}
+C.~Pollard and I.~Sag.
+\newblock {\em Information-Based Syntax and Semantics}.
+\newblock CSLI Lecture Notes No. 13. Stanford, CA, 1987.
+
+\bibitem[Sid81]{Sidner81}
+C.~Sidner.
+\newblock Focussing for {I}nterpretation of {P}ronouns.
+\newblock {\em American Journal for Computational Linguistics}, 7(4):217--231,
+  1981.
+
+\bibitem[Tar95]{Tarau95:BinProlog}
+Paul Tarau.
+\newblock Bin{P}rolog 4.00 {U}ser {G}uide.
+\newblock Technical Report 95-1, D\'{e}partement d'Informatique, Universit\'{e}
+  de Moncton, February 1995.
+\newblock Available by ftp from {\em clement.info.umoncton.ca}.
+
+\bibitem[TDF95]{TDF95a}
+Paul Tarau, Veronica Dahl, and Andrew Fall.
+\newblock Backtrackable {S}tate with {L}inear {A}ssumptions, {C}ontinuations
+  and {H}idden {A}ccumulator {G}rammars.
+\newblock Technical Report 95-2, D\'{e}partement d'Informatique, Universit\'{e}
+  de Moncton, April 1995.
+\newblock Available by ftp from {\em clement.info.umoncton.ca}.
+
+\bibitem[{Van}89]{edcg}
+Peter {Van Roy}.
+\newblock A useful extension to {Prolog}'s {Definite Clause Grammar} notation.
+\newblock {\em SIGPLAN notices}, 24(11):132--134, November 1989.
+
+\end{thebibliography}

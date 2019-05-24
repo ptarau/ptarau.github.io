@@ -1,0 +1,1769 @@
+<title>A Novel Term Compression Scheme and Data Representation in the BinWAM</title>
+
+<CENTER>
+<H2><FONT SIZE=+3>A</FONT>
+<FONT SIZE=+3>N</FONT>OVEL
+<FONT SIZE=+3>T</FONT>ERM
+<FONT SIZE=+3>C</FONT>OMPRESSION
+<FONT SIZE=+3>S</FONT>CHEME
+<FONT SIZE=+3>and</FONT>
+<FONT SIZE=+3>D</FONT>ATA
+<FONT SIZE=+3>R</FONT>EPRESENTATION
+<FONT SIZE=+3>in</FONT>
+<FONT SIZE=+3>the</FONT>
+<FONT SIZE=+3>B</FONT>IN<FONT SIZE=+3>WAM</FONT>
+</H2>
+</CENTER>
+
+<pre>
+<A HREF="http://www.sciences.umoncton.ca/infoque/PAULT.HTM">
+Paul Tarau</A>
+Universit'e de Moncton
+D'epartement d'Informatique
+Moncton, N.B.  Canada, E1A 3E9, 
+tarau@cs.sfu.ca
+<A HREF="http://www.complang.tuwien.ac.at/ulrich/home.html">
+Ulrich Neumerkel</A>
+Technische Universit at Wien
+Institut ur Computersprachen
+A-1040 Wien, Austria
+ulrich@mips.complang.tuwien.ac.at
+</pre>
+
+<P>
+<HR SIZE=4>
+<b>Abstract.</b><p>
+In this paper we present the novel term representation of the BinWAM
+(a simplified WAM engine for executing <i>binary logic programs</i>)
+and evaluate its impact in BinProlog, 
+a C-emulated<A HREF="#footnote1">(1)</A> 
+based on the
+BinWAM and on the mapping of logic programs to binary Prolog introduced 
+in <A HREF="#f13">[Tarau90:PLILP]</A>.
+Terms in the BinWAM are compressed with a new technique called last
+argument overlapping which takes advantage of an unconventional
+untagged pointer representation, called <i>tag-on-data</i>.
+A Cheney-style <b>copy_term</b> algorithm
+using these term representations is described for BinProlog's fast
+ <i>copy once</i> implementation of <b>findall</b>.
+While BinProlog's performance is competitive
+with the best commercial
+Prolog systems, its implementation is significantly simpler.
+Our analysis shows that this term representation and a limited amount
+of instruction folding on top of a reduced basic instruction set make
+the BinWAM a realistic alternative to its more complex forerunner.
+Finally we show how term-compression simplifies and optimizes
+C-translated binarized programs and how the amount of 
+compression can be improved with program transformations.
+<p>
+<B>Keywords</B> : implementation of Prolog, WAM, term
+representation, last argument overlapping, continuation passing style
+
+<P>
+<HR SIZE=4>
+
+<UL>
+<LI><A HREF="#INTRO>Introduction</A>
+  <UL>
+    <UL>
+    <LI><A HREF="#CONTE>Contents.</A>
+    </UL>
+  </UL>
+<LI><A HREF="#BINARY>Binary Prolog</A>
+  <UL>
+    <UL>
+    <LI><A HREF="#FULL>Binarization: from Full Prolog to Binary Prolog.</A>
+    </UL>
+  </UL>
+<LI><A HREF="#BINWAM>The BinWAM</A>
+  <UL>
+  <LI><A HREF="#DATA>Data Areas</A>
+    <UL>
+    <LI><A HREF="#POINT>Choice Point.</A>
+    <LI><A HREF="#VARI>Variable Handling.</A>
+    </UL>
+  <LI><A HREF="#INSTRUC>Simplified Instruction Set</A>
+  <LI><A HREF="#GOAL>Goal Versus Environment Based Implementations</A>
+    <UL>
+    <LI><A HREF="#DYNAMIC>Dynamic Space Requirements.</A>
+    <LI><A HREF="#CODE>Code Space Requirements.</A>
+    </UL> 
+  <LI><A HREF="#STACK>Stack Versus Heap Allocation</A>
+  <LI><A HREF="#REPRE>Term Representation</A>
+   <UL>
+    <LI><A HREF="#TAGPOINTER>Tag-on-Pointer Representation.</A>
+    <LI><A HREF="#TAGDATA>Tag-on-Data Representation.</A>
+    <LI><A HREF="#BIND>Variable binding.</A>
+    <LI><A HREF="#OVERLAP>Last Argument Overlapping.</A>
+    </UL> 
+  <LI><A HREF="#LASTARGU>Adaptations For Last Argument Overlapping</A>
+    <UL>
+    <LI><A HREF="#UNIFI>General Unification and Built-Ins.</A>
+    <LI><A HREF="#GET_STRUC>GET_STRUCTURE-Instruction.</A>
+    <LI><A HREF="#PUT_STRUC>PUT_STRUCTURE-Instruction.</A>
+    </UL> 
+  <LI><A HREF="#COPY_TERM>Cheney-Style Compressing <b>Copy_Term</b></A>
+    <UL> 
+    <LI><A HREF="#CASE>Worst Case.</A>
+    <LI><A HREF="#CDR-COD>Last Argument Overlapping Versus <i>CDR</i>-coding.</A>
+    </UL> 
+  <LI><A HREF="#COPY-ONE>Fast `Copy-Once' Findall</A>
+  </UL>
+<LI><A HREF="#PERFO>Performance Evaluation of the BinWAM</A>
+  <UL>
+  <LI><A HREF="#EMULA>Emulator Code Size.</A>
+  </UL>
+<LI><A HREF="#C-TRANS>Term Compression and C-Translation</A>
+<LI><A HREF="#SOURCE>Source-Level Optimizations and Term-Compression</A>
+<LI><A HREF="#FUTURE>Future Work</A>
+  <UL>
+  <LI><A HREF="#TRANSFO>Source-to-Source Transformations.</A>
+  <LI><A HREF="#OPTI>BinWAM-Optimizations.</A>
+  </UL>
+<LI><A HREF="#CONCLU>Conclusion</A>
+  <UL>
+  <LI><A HREF="#ACKNOW>Acknowledgments.</A>
+  <LI><A HREF="#REF>Reference</A>
+  </UL>
+</UL>
+
+<P>
+<HR SIZE=4>
+
+<CENTER>
+<B><a name="INTRO">
+<H3><FONT SIZE=+2>I</FONT>NTRODUCTION</H3></B>
+</CENTER>
+
+BinProlog is a C-emulated Prolog engine for a subset of Prolog
+<A HREF="#f13">[Tarau90:PLILP]</A> that uses a simplified WAM 
+<A HREF="#f17">[WA83]</A> called
+BinWAM <A HREF="#f9">[Tarau91:JAP]</A>.
+A transformation called binarization <A HREF="#f13">[Tarau90:PLILP]</A>
+ maps full Prolog to binary logic programs. In this manner
+the BinWAM is used to implement full Prolog.
+
+<DD>Our primary motivation was to investigate whether specializing the
+WAM to binary programs yields new optimization opportunities
+that compensate for the extra heap consumption.
+Because WAM's highly optimized environments were
+traded for a heap-only run-time system,
+a slow-down was expected, although it was clear
+from the start that, at least, the implementation
+will be much simpler. Our experience with BinProlog shows that
+its execution speed is competitive with highly optimized implementations
+of the WAM. This paper compares WAM and BinWAM and presents a novel 
+term-compression technique called last argument overlapping. 
+
+<P>
+<HR SIZE=4>
+
+<P>
+<B><a name="CONTE">
+<P><B>C<FONT SIZE=-1>ONTENTS.</FONT></B><P></B>
+
+In <A HREF="#BINARY">Binary Prolog</A>  we present binary Prolog a subset of full 
+Prolog used as the intermediate language for the Prolog-engine.
+<A HREF="#BINWAM">The BinWAM</A> presents our simplified WAM, called BinWAM, and
+discusses the impacts of its simplified design.
+The term representation of the BinWAM is compared with
+traditional structure copying representations.
+<A HREF="#PERFO">Performance Evaluation of the BinWAM</A> compares the  actual implementation, BinProlog,
+to existing systems.
+
+<P>
+<HR SIZE=4>
+
+<P>
+<CENTER>
+<B><a name="BINARY">
+<H3><FONT SIZE=+2>B</FONT>INARY
+<FONT SIZE=+2>P</FONT>ROLOG</H3></B>
+</CENTER>
+
+Binary Prolog is a subset of Prolog based on binary definite programs
+of a very simple form: one atom in the head and one atom in the body.
+This subset, enhanced by a labeled cut and some in-line
+built-ins <A HREF="#f5">[Demoen91:RU]</A>, executes on a WAM engine without
+using WAM's environments.
+
+<P>
+<HR SIZE=4>
+
+<P>
+<B><a name="FULL">
+<P><B>B<FONT SIZE=-1>INARIZATION:</FONT> from
+F<FONT SIZE=-1>ULL</FONT>
+P<FONT SIZE=-1>ROLOG</FONT> to
+B<FONT SIZE=-1>INARY</FONT>
+P<FONT SIZE=-1>ROLOG</FONT></B><P></B>
+
+
+The natural framework of binarization covers the transformation from
+<i>definite metaprograms</i>, i.e., programs with metavariables in
+atom positions to <i>binary definite programs</i>, i.e., programs
+with atomic head and body.
+We refer to <A HREF="#f13">[Tarau90:PLILP]</A>  for a formal definition and
+a study of certain semantic properties of this transformation.
+We give here only a few examples:
+
+<pre>
+      Source clause:                  Binary clause:
+   
+      p(X) :-                         p(X,Cont) :-
+         r(X,Y), 
+         s(Y).
+
+      append([],Ys,Ys).               append([],Ys,Ys,Cont) :-
+                                          true(Cont).
+   
+      and(X,Y) :-                     and(X,Y,Cont) :- 
+          X,                              call(X, call(Y,Cont)).  
+          Y.
+</pre>
+Note that the goal <b>true(Cont)</b> executes the continuation <b>Cont</b>.
+
+<P>
+<HR SIZE=4>
+
+<P>
+<CENTER>
+<B><a name="BINWAM">
+<H3><FONT SIZE=+2>T</FONT>HE
+<FONT SIZE=+2>B</FONT>IN<FONT SIZE=+2>WAM</FONT></H3></B>
+</CENTER>
+
+Since binary Prolog is a subset of full Prolog every Prolog engine can
+be used to execute binary Prolog, although less efficiently than
+the BinWAM.
+We discuss in this section the simplified
+design of the BinWAM with respect to
+the full WAM.
+
+<P>
+<HR SIZE=4>
+
+<B><a name="DATA">
+<H4><FONT SIZE=+1>D</FONT>ATA
+<FONT SIZE=+1>A</FONT>REAS</H4></B>
+
+The WAM does not allocate an environment for a binary clause.
+The BinWAM can thus be understood as a WAM with a split stack model,
+where only the choice stack but not the environment stack is needed.
+Other data areas remain basically the same.
+The omission of the environment stack simplifies both the layout of
+choice points in the OR-stack and the handling of variables.
+
+<P>
+<HR SIZE=4>
+
+<P>
+<B><a name="POINT">
+<P><B>C<FONT SIZE=-1>HOICE</FONT>
+P<FONT SIZE=-1>OINT.</FONT></B><P></B>
+
+ In addition to the argument registers, 
+the BinWAM stores three pointers (next clause, heap and trail) 
+in the choice point. Binary clauses contain always an  additional 
+argument to hold the continuation.
+The smallest choice point contains therefore four elements.
+The WAM choice points require an additional pointer to the top of the
+environment stack and in some implementations also the arity of the
+predicate.
+
+<P>
+<CENTER>   
+<TABLE BORDER=1 CELLPADDING=1>
+<TR ALIGN=CENTER><TH ALIGN=left><b>P</b></TH>
+      <TD> next clause address</TD>
+
+<TR ALIGN=CENTER><TH ALIGN=down><b>H</b></TH>
+      <TD> top of the heap</TD>
+
+<TR ALIGN=CENTER><TH ALIGN=left><b>TR</b></TH>   
+      <TD> top of the trail </TD>
+
+<TR ALIGN=CENTER><TH ALIGN=left><b>A_N</b></TH> 
+      <TD>argument register N</TD>
+
+<TR ALIGN=CENTER><TH ALIGN=left>...</TH>
+      <TD>...</TD>  
+
+<TR ALIGN=CENTER><TH ALIGN=left><b>A_1</b></TH> 
+      <TD>argument register 1</TD>
+</TR>     
+</TABLE>
+        BinWAM choice point 
+</CENTER>
+
+<P>
+<HR SIZE=4>
+
+<P>
+<B><a name="VARI">
+<P><B>V<FONT SIZE=-1>ARIABLE</FONT>
+H<FONT SIZE=-1>ANDLING.</FONT></B><P></B>
+                              
+ Since variables are allocated only
+on the heap, the BinWAM performs a faster trail-check that requires a
+single comparison.
+
+<P>
+<HR SIZE=4>
+
+<B><a name="INSTRUC">
+<H4><FONT SIZE=+1>S</FONT>IMPLIFIED 
+<FONT SIZE=+1>I</FONT>NSTRUCTION
+<FONT SIZE=+1>S</FONT>ET</H4></B>
+
+All instructions related to WAM's <b>Y</b>-variables (local variables)
+are omitted because the environment stack is absent.
+Similarily, there is no <b>ALLOCATE</b>, <b>DEALLOCATE</b>, <b>CALL</b>.
+Special list instructions are omitted as well
+as instructions for void variables and constants.
+A simpler indexing mechanism avoids some indexing instructions.
+Starting from this reduced instruction set some
+frequently occuring sequences have been combined in BinProlog to
+minimize interpretation overhead <A HREF="#f12">[Tarau92:WAMOpt]</A>.
+
+<P>
+<HR SIZE=4>
+
+<B><a name="GOAL">
+<H4><FONT SIZE=+1>G</FONT>OAL
+<FONT SIZE=+1>V</FONT>ERSUS
+<FONT SIZE=+1>E</FONT>NVIRONMENT 
+<FONT SIZE=+1>B</FONT>ASED
+<FONT SIZE=+1>I</FONT>MPLEMENTATIONS</H4></B>
+
+The BinWAM represents every goal after the first one with a separate
+structure. A similar approach that uses a separate stack for these
+goals is called goal stacking. It was proposed in the original
+WAM-report <A HREF="#f17">[WA83]</A>
+ as an alternative to environment stacking.
+
+<DD>We illustrate the differences using the non binary clause
+<b>h :- g_0, g_1, ..., g_n</b>
+with <i>n > 0</i>. The minimal clause is therefore of the form
+<b>h :- g_0, g_1</b>.
+Facts and binary clauses are not discussed because they
+do not consume space in both approaches.
+The arity of goal
+<b>g_i</b> in the original Program is a_i. To outline the main
+points, we concentrate only on clauses that contain no functors in
+goals.
+
+<P>
+<HR SIZE=4>
+
+<P>
+<B><a name="DYNAMIC">
+<P><B>D<FONT SIZE=-1>YNAMIC</FONT>
+S<FONT SIZE=-1>PACE</FONT>
+R<FONT SIZE=-1>EQUIREMENTS.</FONT></B><P></B>
+
+The WAM requires at least two
+elements in an environment to represent linking and the code continuation
+(<b>CE</b> and <b>CP</b>). The worst case of space consumption
+in the WAM occurs when all arguments of the goals are variables and
+when all these variables occur once in  <b>h</b> or <b>g_0</b> and once in
+a goal <b>g_i</i>, <i>i > 0</i>. In this case, every variable has to be allocated
+in the environment. To represent an environment,
+the WAM needs <b>DYNSPACE</b>_<tt>WAM</tt> cells on the local stack.
+
+<pre>
+
+         	2 <= <b>DYNSPACE</b>_WAM <= 2 + a_1 + a_2 +...+ a_n
+	
+</pre>
+<p>
+The WAM reduces its space requirements for argument constants and
+variables occurring more than once within the goals <b>g_i</b>,
+<i>i > 0</i>. Furtheron the WAM is able to trim the environment
+under certain circumstances.
+<DD>
+The BinWAM requires <b>DYNSPACE</b>_BinWAM cells
+allocated on the heap. In contrast to the WAM, the BinWAM
+cannot reduce its space requirements. Only program transformations
+can be used for this purpose. No direct trimming is possible in
+the BinWAM, however, during garbage collection unused parts
+of the continuation can be reclaimed.
+
+<pre>
+
+                <b>DYNSPACE</b>_BinWAM = 1 + n + a_1 + a_2 +...+ a_n
+
+</pre>
+
+In conclusion, the BinWAM requires DeltaDYNSPACE more cells
+to represent an environment.
+
+<pre>
+
+         	0 <= DeltaDYNSPACE <= n - 1 + sigma a_1 + a_2 +...+ a_n
+
+</pre>
+
+<P>
+<HR SIZE=4>
+
+<P>
+<B><a name="CODE">
+<P><B>C<FONT SIZE=-1>ODE</FONT>
+S<FONT SIZE=-1>PACE</FONT>
+R<FONT SIZE=-1>EQUIREMENTS.</FONT></B><P></B>
+
+While the dynamic space requirements of the BinWAM can be
+significanlty larger than those of the WAM,
+the size of generated code is approximately the same,
+favoring the BinWAM by a trifle.
+Since the instructions needed for head-unification, head built-ins
+and the initialization of the first goal are the same, we consider
+in the following comparison only the size of the code required
+for the goals <b>g_1</b> to <b>g_n</b>.
+<DD>
+Before executing a goal the classic WAM initializes all arguments.
+The BinWAM initializes all continuations directly after the head.
+So both machines have to execute one instruction for each argument.
+However, in addition to the initialization of the arguments, 
+the WAM has to set up the environment for those variables that 
+occur first in the head or g_0 and in a later goal g_i, <i>i > 0</i>. 
+We illustrate this case by the following clause:
+
+<pre>
+     a(A_1, ... A_m) :-
+     b,
+     c(A_1, ... A_m). 
+</pre>
+
+In this case the BinWAM simply creates the continuation
+<b>c/m+1</b> using <b>m+1</b> instruction to initialize the
+arguments. The WAM, however, has to save all <i>m</i> variables
+before executing the goal <b>b</b> using <i>m</i> get_variable-instructions.
+Then, after executing <b>b</b> the <i>m</i> argument registers have to be
+initialized with <i>m</i> put_value-instructions.
+In this (contrived) worst case, 
+the WAM requires<A HREF="#footnote2">(2)</A> therefore twice as much instructions as 
+the BinWAM.
+<DD>
+While the initialization code in the WAM is spread over <i>n</i>
+independent locations in addition to initialization in the head,
+the BinWAM performs initialization in a single sequence of
+instructions. The fact that the BinWAM initializes goals
+earlier might improve or deteriorate execution speed.
+Demoen and Marien <A HREF="#f5">[Demoen91:RU]</A> discuss these impacts
+in detail and show how source-to-source transformations alleviate
+potential problems.
+
+<P>
+<HR SIZE=4>
+
+<B><a name="STACK">
+<H4><FONT SIZE=+1>S</FONT>TACK
+<FONT SIZE=+1>V</FONT>ERSUS
+<FONT SIZE=+1>H</FONT>EAP 
+<FONT SIZE=+1>A</FONT>LLOCATION</H4></B>
+
+Due to the absence of an auxiliary stack, be it an environment or
+a goal stack, heap consumption is increased in the BinWAM.
+Simplicity in the BinWAM's design is achieved by higher memory
+requirements similar to implementations of functional languages 
+based on continuation passing style
+<A HREF="#f16">[WAND80]</A>.
+<DD>
+Note that the situation in Prolog is different from the
+situation in functional languages. While functional languages reclaim
+all memory allocated by doing garbage collection, the BinWAM uses still an
+OR-stack for backtracking. I.e. the AND-control is implemented with
+memory is reclaimed by backtracking as in the WAM.
+In particular,
+calls to <b>findall/3</b> produce as much AND-garbage as any other
+Prolog implementation. Only the space needed to represent the list of
+solutions remains on the heap.  If a goal is known to be determinate,
+<b>findall/3</b> can be used to reclaim all volatile terms needed to
+execute the goal. In <A HREF="#COPY-ONE">Fast `Copy-Once' Findall</A> a copy-once implementation of
+<b>findall/3</b> is described.
+<DD>
+For these reasons it is evident that the BinWAM consumes similar
+or less heap space to be reclaimed by garbage collection than a
+machine for functional languages. Implementations like <b>SML-NJ</b>
+have shown that even in a functional language the overheads of increased heap
+consumption are manageable <A HREF="#f1">[Appel92]</A>.
+
+<P>
+<HR SIZE=4>
+
+<B><a name="REPRE">
+<H4><FONT SIZE=+1>T</FONT>ERM
+<FONT SIZE=+1>R</FONT>EPRESENTATION</H4></B>
+
+As the BinWAM consumes more heap than the traditional WAM a compact representation of heap terms is of particular interest for the BinWAM.
+Similar to the simplification of the instruction set, the term
+representation has been simplified in the BinWAM. This representation 
+is also of interest for other structure copying Prolog systems.
+
+<P>
+<HR SIZE=4>
+
+<P>
+<B><a name="TAGPOINTER">
+<P><B>T<FONT SIZE=-1>AG</FONT>-on-P<FONT SIZE=-1>OINTER</FONT>
+R<FONT SIZE=-1>EPRESENTATION.</FONT></B><P></B>
+
+Current structure copying Prolog machines use several pointer types
+to represent terms. Usually, at least three pointer types are used.
+We call such a representation <i>tag-on-pointer</i> representation.
+<ol>
+<li> reference or variable
+<li> pointer to a structure
+<li> pointer to a list, as an optimization for structure <b>./2</b>
+</ol>
+
+The specialized pointer type for lists is not strictly needed. Yet,
+most machines implement this optimization.
+Usually, references are tagged by word alignment i.e. the lower
+bits of a reference are zero. The other pointer tags are encoded in
+the lower bits. When creating a pointer, a dedicated tag is
+added to the address.
+<DD>
+We note that the coding effort for procedures that manipulate terms
+like <b>copy_term/2</b>, <b>assert/1</b> or garbage collection
+increases with the number of different pointer types. In the
+classical WAM the situation is even worse because different
+pointer types can point to the same memory cell (lists and
+references).
+
+<P>
+<HR SIZE=4>
+
+<P>
+<B><a name="TAGDATA">
+<P><B>T<FONT SIZE=-1>AG</FONT>-on-D<FONT SIZE=-1>ATA</FONT>
+R<FONT SIZE=-1>EPRESENTATION.</FONT></B><P></B>
+
+The BinWAM uses a <i>single</i> pointer type.
+Pointers are word aligned so no extra tagging is needed.
+<ol>
+<li> reference, variable, or pointer to structure
+</ol>
+
+Thus, Prolog variables and C pointers have the 
+same representation.
+The two other tagged data types of BinProlog are integers, and
+functors.
+Symbolic constants are implemented as functors of arity 0.
+Like integers, constants are either kept in registers or
+directly copied with no extra reference.
+64 bit floating point numbers are mapped to a functor of arity 3.
+Unification and the basic instruction set is therefore not
+affected by these additional data types.
+Lists are treated as any other structure of arity 2.
+
+<P>
+<HR SIZE=4>
+
+<P>
+<B><a name="BIND">
+<P><B>V<FONT SIZE=-1>ARIABLE</FONT>
+B<FONT SIZE=-1>INDING.</FONT></B><P></B>
+
+When binding a variable to another dereferenced non variable term the
+BinWAM has to perform an additional operation to keep reference
+chains short. While binding corresponds usually to a single
+assignment, the BinWAM has to test whether the term is a structure or
+not. In the former case the reference is used, in the latter the
+value.
+Compared to common WAM-implementation, the more complex binding scheme
+does not deteriorate efficiency of unification because the BinWAM omits a
+comparison during trailing. In exchange, an additional comparison
+for variable binding is performed.
+
+<P>
+<HR SIZE=4>
+
+<P>
+<B><a name="OVERLAP">
+<P><B>L<FONT SIZE=-1>AST</FONT>
+A<FONT SIZE=-1>RGUMENT</FONT>
+O<FONT SIZE=-1>VERLAPPING.</FONT></B><P></B>
+
+While the BinWAM does not provide a specialized representation for
+lists, it allows a more general optimized representation useful
+for any structure. References to structures in the last
+argument of another structure can be replaced by the structure
+itself. The WAM represents a list of <i>n</i> elements by <i>2n</i>
+memory cells. We illustrate the WAM representation with the list
+<b>[1,2,3]</b>.
+
+<pre>
+             --------------------------
+      <b>WAM:</b>  | 1 | <b>-></b> | 2 | <b>-></b> | 3 |[]/0|
+             --------------------------
+</pre>
+
+If another structure of arity two is used, space consumption
+increases to <i>3n</i> cells. The term <b>t(1,t(2,t(3,n)))</b> is thus
+represented as below. The BinWAM does not require a pointer in the
+last argument of <b>t/2</b> if the subsequent structure can be found
+directly after in memory. In general, <i>n</i> elements require
+<i>2n+1</i> memory cells. The name of the structure has no impact on
+space consumption. It is in particular not necessary to use always the
+same functor.
+
+<pre>
+             -------------------------------------
+      <b>WAM:</b>  |t/2| 1 | <b>-></b> |t/2| 2 | <b>-></b> |t/2| 3 |n/0|
+             -------------------------------------
+             -----------
+   <b>BinWAM:</b>  |t/2| 1 | v |
+             -----------
+                     -----------
+                    |t/2| 2 | v |
+                     -----------
+                             -----------
+                            |t/2| 3 |n/0|
+                             -----------
+            ----------------------------
+            ----------------------------
+             ---------------------------
+            |t/2| 1 |t/2| 2 |t/2| 3 |n/0|
+             ---------------------------
+
+</pre>
+In the best case last argument overlapping halfs memory consumption.
+E.g., the term <i>s^n</i> requires <i>n + 1</i> memory cells, while the WAM 
+uses always <i>2n</i> memory cells. WAM and BinWAM represent the term
+<i>s^5 = s(s(s(s(s(0)))))</i> as follows:
+
+<pre>
+             -------------------------------------------
+      <b>WAM:</b>  |s/1| <b>-></b> |s/1| <b>-></b> |s/1| <b>-></b> |s/1| <b>-></b> |s/1| 0 |
+             -------------------------------------------
+             -----------------------
+   <b>BinWAM:</b>  |s/1|s/1|s/1|s/1|s/1| 0 |
+             -----------------------           
+
+</pre>
+Note that the compact representation is only possible if
+the structures are created in the right order.
+If last argument overlapping is not possible during
+creation, procedures that copy (e.g. copy_term/2, assert/1) or
+reorganize terms (garbage collection) should generate more compact
+representations.
+<DD>
+As a positive impact on programming style our new data representation
+makes the usage of dotted pairs (i.e. ugly constructs like <b>[a|b]</b>) for
+efficiency reasons unnecessary.
+
+<P>
+<HR SIZE=4>
+
+<B><a name="LASTARGU">
+<H4><FONT SIZE=+1>A</FONT>DAPTATIONS 
+<FONT SIZE=+1>for</FONT>
+<FONT SIZE=+1>L</FONT>AST
+<FONT SIZE=+1>A</FONT>RGUMENT
+<FONT SIZE=+1>O</FONT>VERLAPPING</H4></B>
+
+Several built-ins had to be modified in order to
+read the new compact representation. Instructions creating
+structures were modified to create overlapping structures if
+possible.
+
+<P>
+<HR SIZE=4>
+
+<P>
+<B><a name="UNIFI">
+<P><B>G<FONT SIZE=-1>ENERAL</FONT>
+U<FONT SIZE=-1>NIFICATION</FONT>
+and B<FONT SIZE=-1>UILT-</FONT>
+I<FONT SIZE=-1>NS.</FONT></B><P></B>
+
+For general unification, care has to be taken when unifying last
+arguments of structures. In this case instead of the value of the
+last arguments, references to them are unified.  In a similar manner
+the built-in <b>true/1</b> used to call continuations has been adapted.
+The runtime overhead of these modifications is empirically
+negligible. Built-ins like <b>univ/2</b>, <b>name/2</b>
+and <b>maplist/3</b> are changed to create overlapping lists.
+
+<P>
+<HR SIZE=4>
+
+<P>
+<B><a name="GET_STRUC">
+<P><B>GET_STRUCTURE</FONT>-I<FONT SIZE=-1>NSTRUCTION.</FONT></B><P></B>
+
+During head unification in write mode a new structure is created on
+the heap. If the variable to be bound to the structure is found as
+the last element on the heap we overwrite the variable with the
+new functor. No reference is created. The <b>GET_STRUCTURE</b>
+instruction is  modified as follows.
+
+<pre>
+       get_structure An:
+             DEREF(An) ;
+             if(VAR(An))
+              {  trail(An);
+                 if (An + 1 == H)
+                     H --;}
+                 *H = functor;
+                 ...
+              }
+
+</pre>
+
+<P>
+<HR SIZE=4>
+
+<P>
+<B><a name="PUT_STRUC">
+<P><B>PUT_STRUCTURE</FONT>-I<FONT SIZE=-1>NSTRUCTION.</FONT></B><P></B>
+
+This instruction is used to create structures that are passed further
+to the next goal. In particular, continuations are created using
+<b>PUT_STRUCTURE</b>-instructions. When a single structure is created,
+there is no possibility for last argument overlapping since the last
+argument will point to a previously created structure. Only garbage
+collection or <b>copy_term</b> will be able to reorder such structures.
+<DD>
+Nested structures are created in the WAM using a bottom-up
+compilation scheme. First, structures are created that refer
+to already initialized terms only. The reason for this compilation
+scheme is that the WAM instructions for initializing the arguments
+of a structure (<b>WRITE</b>-instructions) use the heap pointer as an
+implicit argument.
+As a consequence, the WAM creates only backward pointers, depicted
+as `\'. Last argument overlapping requires a top-down
+compilation
+for those structures occurring in the last argument of another
+structure. All other structures are created in the same manner as in
+the traditional WAM. We illustrate this point by the following simple
+program.
+
+<pre>
+      Source clause:                      Binary clause:
+   
+      p(X) :-                             p(X,Cont) :-
+         q,                                  q(r(s(X), t(Cont))).
+         r(s(X)),
+         t.
+</pre>
+The two last goals in the clause above are encoded as terms.
+The last goal <b>t</b> appears in the last argument of <b>r</b>.
+Last argument overlapping is therefore applicable.
+In the usual WAM compilation scheme both <b>s/1</b> and <b>t/1</b> are
+created prior to r/2. Last argument overlapping
+allows the creation of <b>t/1</b> immediately after <b>r/2</b>. In this
+manner both a memory cell and an instruction is saved.
+
+<pre>
+     ----------------------------                ------------------------
+    |s/1| X |t/1|Cont|r/2| \ | \ |              |s/1| X |r/2| \ |t/1|Cont|
+     ----------------------------                ------------------------
+ 
+    put_structure s/1,var(3)                    put_structure s/1,var(3)
+    write_value put,var(1)                      write_value put,var(1)  
+    put_structure t/1,var(4)                    put_structure r/2,var(1)
+    write_value put,var(2)                      write_value put,var(3)       
+    put_structure r/2,var(1)                    put_structure t/1,var(4)
+    write_value put,var(3)                      write_value put,var(2)  
+    write_value put,var(4)                      execute q,1
+    execute q,1                            
+
+</pre>
+Currently the code above listed with BinProlog's
+intermediate WAM-code listing tool <b>asm/0</b> is generated by an
+experimental separate pass after WAM-code generation. While our first
+measurements with this modified goal compilation scheme indicate small
+savings (4%)
+in runtime and dynamic memory, our compilation scheme reduces
+the size of larger clauses. Since the continuation argument
+is currently always the last argument,
+continuations are only compacted statically if a clause contains at
+least three real goals.
+
+<DD>Most built-in predicates occurring directly after the head are
+compiled in-line
+and therefore do not count as a real goal. Further the most heavily
+used clauses contain only one or two goals. The biggest savings so
+far have been observed in clauses that are not frequently used, but
+that consume a lot of space for passing structures further on.
+
+<DD>In ongoing work we implement a mixture between top-down compilation
+for structures occurring in the last argument and bottom-up
+compilation for other terms. For all structures that occur
+only as a last argument <b>PUT_STRUCTURE</b>-instructions are replaced
+by <b>WRITE_CONSTANT</b>-instructions. This compilation scheme for
+<b>PUT</b>-instructions does not require any modification or extension
+to the existing instruction set. In the case of a native code 
+implementation, A. Marien's <A HREF="#f7">[Marien88:KUL]</A> method is of interest.
+
+<P>
+<HR SIZE=4>
+
+<B><a name="COPY_TERM">
+<H4><FONT SIZE=+1>C</FONT>HENEY-<FONT SIZE=+1>S</FONT>TYLE
+<FONT SIZE=+1>C</FONT>OMPRESSING
+<B><FONT SIZE=+1>C</FONT>OPY-<FONT SIZE=+1>T</FONT>ERM</B></H4></B>
+
+The classical algorithm of Cheney <A HREF="#f3">[Cheney70]</A> copies a term in a
+breadth-first manner using forwarding pointers for already moved
+cells. This algorithm can be directly taken to implement
+<b>copy_term</b>. The single difference is that the forwarding
+pointers that destroy the original term, have to be trailed on a
+value trail. As long as no sharing of identical terms is present, the
+algorithm produces only forward references, depicted `/'.
+We modified this algorithm to enforce last argument overlapping as
+follows. When a structure is copied, its last argument and all its
+subterms that are again found as a last argument are copied first. In
+this manner, most possibilities for last argument overlapping are
+discovered. While the classical method is a pure breadth-first
+algorithm, our adaptation introduces a depth-first component.
+In the frequent case of a list of atomic cells our algorithm
+creates a fully contiguous <i>vector-like</i> object.
+We illustrate BinProlog's algorithm with the term t([a,b,c],[d,e,f]).
+Breadth-first copying leads to the first memory layout,
+while the second layout is the result of our algorithm in BinProlog.
+Note that the first algorithm slices up all linear chains so that no
+last argument overlapping is possible.
+
+<pre>         
+                ---------------------------------------------------------------------------------
+<b>Breadth-first:</b> |t/2| / | / |./2| a | / |./2| d | / |./2| b | / |./2| e | / |./2| c |[]|./2| f |[]|   
+                ---------------------------------------------------------------------------------
+                -------------------------------------------------------------
+    <b>BinProlog:</b> |t/2| / |./2| d |./2| e |./2| f |[]|./2| a |./2| b |./2| c |[]|   
+                -------------------------------------------------------------
+</pre>
+<DD>As long as there are no shared subterms, our algorithm is able to
+exploit all overlaps. However, in the presence of shared subterms,
+our algorithm may expand a compact term up to 50%.
+
+<P>
+<HR SIZE=4>
+
+<P>
+<B><a name="CASE">
+<P><B>W<FONT SIZE=-1>ORST</FONT>
+C<FONT SIZE=-1>ASE</FONT></B><P></B>
+ 
+Consider the term <b>f(s^1, s^2, ..., s^n-1, s^n, 0)</b>
+where all common subterms are shared.
+The optimal representation requires <i>2n+3</i> memory cells for all
+<i>n>0</i> : <i>n+2</i> for the functor <b>f/n+1</b> and
+<i>n+1</i> for the term <b>s^n</b>. In this case, all terms <b>s^i</b>
+<i>0 < i < n</i> are represented as pointers to subterms of s^n.
+Every structure <b>s/1</b> up to one can be accessed twice:
+once from the structure f/<i>n+1</i> and once from another structure
+s/1. In order to perform optimal copying, the topmost
+structure representing <b>s^n</b> should be copied first.
+However, a left-to-right scan first copies <b>s^1</b>, then
+<b>s^2</b> etc. All last argument overlaps are hence destroyed.
+The resulting copy
+requires <i>(n+2) + 2n = 3n+2</i> cells. The following picture
+illustrates the case <i>n = 5</i>.
+<pre>
+            ---------------------------------------------------
+  <b>Optimal:</b> |f/6| / | / | / | / |  |0/0 |s/1|s/1|s/1|s/1|s/1|0/0|   
+            ---------------------------------------------------
+            --------------------------------------------------------------------
+    <b>Worst:</b> |f/6| / | / | / | / | / |0/0 |s/1|0/0|s/1| \ |s/1| \ |s/1| \ |s/1| \ |
+            --------------------------------------------------------------------
+</pre>
+A complete visit of the term is needed to determine all possible overlaps.
+Modifying the simple left-to-right scanning alone only reduces or changes 
+the worst case. An optimal <b>copy_term</b> algorithm requires a
+pass prior to copying for identifying all structures occurring as the last 
+argument of another structure. Since the worst case occurs only for heavily 
+shared structures and since a separate pass would approximately double execution
+time we have currently only integrated the single pass algorithm into BinProlog.
+
+<P>
+<HR SIZE=4>
+
+<P>
+<B><a name="CDR-COD">
+<P><B>L<FONT SIZE=-1>AST</FONT>
+A<FONT SIZE=-1>RGUMENT</FONT>
+O<FONT SIZE=-1>VERLAPPING</FONT>
+V<FONT SIZE=-1>ERSUS</FONT>
+<I>CDR</I><FONT SIZE=-1>-CODING.</FONT></B><P></B>
+
+Techniques for eliminating pointers in data structures of symbolic
+programming languages are well known. In particular,
+<i>CDR</i>-coding has been used in LISP-systems.
+In such systems, a CONS-cell does not contain
+the <i>CDR</i>-pointer to the next <b>CONS</b>-cell. 
+Instead, a special tag in the <b>CAR</b> indicates that
+the next <b>CONS</b>-cell is located at the place of the <b>CDR</b>.
+<i>CDR</i>-coding has been investigated
+for Prolog in <A HREF="#f6">[DobryPhD]</A>.
+The technique is not used in major modern
+systems ever since because it was shown useful only in hardware
+implementations.
+Last argument overlapping is a more general optimization that
+applies to any structure and requires no special tags.
+In particular, continuations profit from our optimization.
+
+<P>
+<HR SIZE=4>
+
+<P>
+<B><a name="COPY-ONE">
+<H4><FONT SIZE=+1>F</FONT>AST 
+<FONT SIZE=+1>'C</FONT>OPY-<FONT SIZE=+1>O</FONT>NE<FONT SIZE=+1>'</FONT>
+<FONT SIZE=+1>F</FONT>INDALL</H4></B>
+
+Some key extensions to Prolog take advantage of
+our compressed term representation and
+fast <b>copy_term</b> algorithm.
+We implemented <b>findall/3</b> and
+<b>findall/4</b> using a <i>copy once</i> technique. In traditional
+implementations every solution found is copied twice: first into the
+database, then back into a list on the heap. With the technique of
+<i>heap-lifting</i> <A HREF="#f10">[Tarau92:ECO]</A> <b>findall</b> reserves in advance
+space on the heap for the list of solutions. Currently, 1/8 of the
+available heap space is reserved; the heap is split. 
+The upper part of the heap is used for executing the goal. Every solution 
+is copied into the lower part. Therefore, the list of solutions is constructed
+during the execution of the goal. After the exhaustive search, the
+heap is set after the copy of the last answer. An internal
+stack keeps track of split areas for recursive uses of <b>findall</b>.
+The Prolog part of <b>findall</b> appears as a failure driven loop. This
+has the advantage that it can be partially evaluated (for example in
+the case when the goal is known at compile time) and other
+<b>findall-like</b> predicates can be built using the same primitives.
+We refer the reader to <A HREF="#f10">[Tarau92:ECO]</A> for the C-sources of
+<b>findall</b>. Note that the statically fixed ratio between
+answer-space and computation-space can be overridden by giving
+the desired size of the answer space as an optional argument to
+a given instance of <b>findall</b>. This technique can be applied in principle
+to any WAM-based implementation.
+
+<P>
+<HR SIZE=4>
+
+<CENTER>
+<B><a name="PERFO">
+<H3><FONT SIZE=+2>P</FONT>ERFORMANCE
+<FONT SIZE=+2>E</FONT>VALUATION<BR>
+<FONT SIZE=+2>of</FONT>
+<FONT SIZE=+2>the</FONT>
+<FONT SIZE=+2>B</FONT>IN<FONT SIZE=+2>WAM</FONT>
+</H3></B></CENTER>
+
+<A HREF="#fig1">Figure 1</A> compares the performance of BinProlog 2.10 with C-emulated
+and native code SICStus Prolog 2.1 and Quintus Prolog 3.1.1, all running
+on a <i>SPARC</i>-station \<i>ELC</i>. The SICStus compiler is bootstrapped so
+that built-in predicates are compiled to native code (the fastest
+possible configuration). Timing is without garbage collection, as returned by
+<b>statistics(runtime,_)</b>. The programs are available in the directory <b>progs</b> of 
+the BinProlog distribution. <b>NREV</b> is the well-known naive reverse benchmark,
+<b>CNREV</b> is obtained from <b>NREV</b> by replacing the list constructor with a different
+functor of arity two, the <b>CHAT</b>-Parser is the unmodified version from the Berkeley
+Benchmark,  <b>FIBO</b>(16)x50 is the recursive Fibonacci predicate,
+Q8 is an 8-Queens program, <b>PUZZLE</b> is a definite clause solution to a logic problem, 
+<b>LKNIGHT</b>(5) is a complete knight tour, <b>PERMS</b>(8) is a permutation generator, 
+<b>DET-P</b>(8) is a deterministic all permutation program,
+<b>FINDALL-P</b>(8) is a findall-based all-permutations program,
+<b>BFIRST-M</b> is a naive breadth-first Prolog meta-interpreter,
+<b>BOOTSTRAP</b> is our compiler compiling itself,
+<b>CAL</b> is an arithmetic intensive calendar program,
+<b>DIFFEREN</b> is a symbolic differentiation program from the
+Warren benchmarks and <b>CHOICE</b> is a backtracking intensive program 
+from the ECRC benchmark. Although shallow-backtracking is faster in
+C-emulated SICStus due to the optimization described in <A HREF="#f2">[Carlsson90]</A> the overall
+performance for this benchmark is better in BinProlog due in part to
+its smaller and unlinked choice points. This materializes as a 7
+Mbytes (SICStus) versus 5 Mbytes (BinProlog) OR-stack consumption.
+
+<P>
+<B><a name="fig1"></B>
+<CENTER> 
+<TABLE BORDER=2 CELLPADDING=1>
+<TR ALIGN=CENTER><TH><i>System</i> <P><i>version</i></TH>
+	    <TH> SICStus   <p>2.1_6   <p>C emulator</TH>
+	    <TH> BinProlog <P>2.10 <P>C emulator</TH>
+      <TH> Quintus <P>3.1.1 <P>asm emulator</TH>
+	    <TH> SICStus <P>2.1_6 <P>native</TH>
+</TR><P>
+<TR ALIGN=RIGHT><TH ALIGN=LEFT>NREV</TH>
+	<TD>139 klips</TD>
+	<TD>223 klips</TD>
+	<TD>479 klips</TD>
+	<TD>566 klips</TD>
+</TR><P>
+<TR ALIGN=RIGHT><TH ALIGN=LEFT>CNREV</TH>
+	<TD>120 klips</TD>
+	<TD>223 klips</TD>
+	<TD>130 klips</TD>
+	<TD>466 klips</TD>
+</TR><P>
+<TR ALIGN=RIGHT><TH ALIGN=RIGHT>CHAT-Parser</TH>
+	<TD>  1.540 s</TD>
+	<TD>  1.283 s</TD>
+	<TD>  0.900 s</TD>
+	<TD>  0.660 s</TD>
+</TR><P>
+<TR ALIGN=RIGHT><TH ALIGN=LEFT>FIBO(16)x50</TH>
+	<TD>4.030 s</TD>
+	<TD>3.300 s</TD>
+	<TD>2.100 s</TD>
+	<TD>1.320 s</TD>
+</TR><P>
+<TR ALIGN=RIGHT><TH ALIGN=LEFT>Q8</TH>
+	<TD>0.379 s</TD>
+	<TD>0.266 s</TD>
+	<TD>0.167 s</TD>
+	<TD>0.119 s</TD>
+</TR><P>
+<TR ALIGN=RIGHT><TH ALIGN=LEFT>PUZZLE</TH>
+	<TD>0.100 s</TD>
+	<TD>0.083 s</TD>
+	<TD>0.050 s</TD>
+	<TD>0.050 s</TD>
+</TR><P>
+<TR ALIGN=RIGHT><TH ALIGN=LEFT>LKNIGHT(5)</TH>
+	<TD>132 s</TD>
+	<TD>93 s</TD>
+	<TD>77 s</TD>
+	<TD>43 s</TD>
+</TR><P>
+<TR ALIGN=RIGHT><TH ALIGN=LEFT>PERMS(8)</TH>
+	<TD>1.189 s</TD>
+	<TD>0.717 s</TD>
+	<TD>0.450 s</TD>
+	<TD>0.339 s</TD>
+</TR><P>
+<TR ALIGN=RIGHT><TH ALIGN=LEFT>DET-P(8)</TH>
+	<TD>2.430 s</TD>
+	<TD>1.966 s</TD>
+	<TD>1.450 s</TD>
+	<TD>0.650 s</TD>
+</TR><P>
+<TR ALIGN=RIGHT><TH ALIGN=LEFT>FINDALL-P(8)</TH>
+	<TD>8.500 s</TD>
+	<TD>2.867 s</TD>
+	<TD>31.333 s</TD>
+	<TD>7.450 s</TD>
+</TR><P>
+<TR ALIGN=RIGHT><TH ALIGN=LEFT>BFIRST-M</TH>
+	<TD>0.490 s</TD>
+	<TD>0.217 s</TD>
+	<TD>1.233 s</TD>
+	<TD>0.360 s</TD>
+</TR><P>
+<TR ALIGN=RIGHT><TH ALIGN=LEFT>BOOTSTRAP</TH>
+	<TD>20.550 s</TD>
+	<TD>20.683 s</TD>
+	<TD>23.517 s</TD>
+	<TD>12.260 s</TD>
+</TR><P>
+<TR ALIGN=RIGHT><TH ALIGN=LEFT>CAL</TH>
+	<TD>1.381 s</TD>
+	<TD>0.950 s</TD>
+	<TD>0.566 s</TD>
+	<TD>0.410 s</TD>
+</TR><P>
+<TR ALIGN=RIGHT><TH ALIGN=LEFT>DIFFEREN</TH>
+	<TD>1.380 s</TD>
+	<TD>0.950 s</TD>
+	<TD>0.566 s</TD>
+	<TD>0.399 s</TD>
+</TR><P>
+<TR ALIGN=RIGHT><TH ALIGN=LEFT>CHOICE</TH>
+	<TD>5.899 s</TD>
+	<TD>3.617 s</TD>
+	<TD>7.717 s</TD>
+	<TD>1.690 s</TD>
+
+</TR>
+</TABLE>
+<P>
+<b>Fig.1.</b> Speed of BinProlog versus environment stack implementations (Sparc ELC).
+</CENTER>
+
+<P>
+<CENTER> 
+<TABLE BORDER=2 CELLPADDING=1>
+<TR ALIGN=CENTER><TH><i>Bmark/Compiler</i></TH>
+	    <TH> No  </TH>
+	    <TH> T   </TH>
+      <TH> I2,T</TH>
+	    <TH> I3  </TH>
+      <TH> I3,T</TH>
+</TR><P>
+<TR ALIGN=RIGHT><TH ALIGN=LEFT>NREV</TH>
+	<TD>229 kl</TD>
+	<TD>238 kl</TD>
+	<TD>326 kl</TD>
+	<TD>408 kl</TD>
+  <TD>436 kl</TD>
+</TR><P>
+<TR ALIGN=RIGHT><TH ALIGN=LEFT>CHAT-Parser</TH>
+	<TD>0.81 s</TD>
+	<TD>0.81 s</TD>
+	<TD>0.72 s</TD>
+	<TD>0.69 s</TD>
+  <TD>0.70 s</TD>
+</TR><P>
+<TR ALIGN=RIGHT><TH ALIGN=LEFT>PERMS(8)</TH>
+	<TD>0.49 s</TD>
+	<TD>0.48 s</TD>
+	<TD>0.41 s</TD>
+	<TD>0.36 s</TD>
+  <TD>0.37 s</TD>
+</TR><P>
+<TR ALIGN=RIGHT><TH ALIGN=LEFT>DET-P(8)</TH>
+	<TD>1.46 s</TD>
+	<TD>1.47 s</TD>
+	<TD>1.19 s</TD>
+	<TD>0.93 s</TD>
+	<TD>1.02 s</TD>
+</TR><P>
+<TR ALIGN=RIGHT><TH ALIGN=LEFT>FINDALL-P(8)</TH>
+	<TD>1.44 s</TD>
+	<TD>1.42 s</TD>
+	<TD>1.35 s</TD>
+	<TD>0.36 s</TD>
+  <TD>1.30 s</TD>
+</TR><P>
+<TR ALIGN=RIGHT><TH ALIGN=LEFT>CHOICE</TH>
+	<TD>2.06 s</TD>
+	<TD>2.06 s</TD>
+	<TD>1.98 s</TD>
+	<TD>1.92 s</TD>
+  <TD>1.96 s</TD>
+</TR><P>
+<TR ALIGN=RIGHT><TH ALIGN=LEFT>QSORT </TH>
+	<TD>0.72 s</TD>
+	<TD>0.67 s</TD>
+	<TD>0.61 s</TD>
+	<TD>0.61 s</TD>
+  <TD>0.55 s</TD>
+
+</TR>
+</TABLE>
+<P>
+<b>Fig.2.</b> Impact of instruction and term compression on execution speed (Sparc 10/20).
+</CENTER>
+
+<P>                      
+<DD>Note that although term-compression implies a (small) amount of extra
+work, it actually accelerates some of the benchmarks due to the
+reduced memory bandwidth.  Clearly AND-intensive programs like NREV,
+QSORT benefit most from term compression.
+<DD>
+Heap-savings <A HREF="#fig3">(Figure 3)</A> are also more
+noticeable for programs which do most of
+the structure construction in the head like NREV and
+CNREV. We expect useful savings on all programs
+when the optimization for PUT operations
+will be integrated in the compiler.
+For comparison we have given also heap consumption
+for SICStus.
+
+<P>
+<B><a name="fig3"></B>
+<CENTER> 
+<TABLE BORDER=2 CELLPADDING=1>
+<TR ALIGN=CENTER><TH><i>Prog/Heap with no gc</i></TH>
+	    <TH> No  </TH>
+	    <TH> T   </TH>
+      <TH> Sicstus 2.1</TH>
+</TR><P>
+<TR ALIGN=RIGHT><TH ALIGN=LEFT>NREV</TH>
+	<TD>547K</TD>
+	<TD>369K</TD>
+	<TD>361K</TD>
+</TR><P>
+<TR ALIGN=RIGHT><TH ALIGN=LEFT>CNREV</TH>
+	<TD>547K</TD>
+	<TD>369K</TD>
+	<TD>541K</TD>
+</TR><P>
+<TR ALIGN=RIGHT><TH ALIGN=LEFT>FINDALL-P(8)</TH>
+	<TD>4517K</TD>
+	<TD>3387K</TD>
+	<TD>4193K</TD>
+</TR><P>
+<TR ALIGN=RIGHT><TH ALIGN=LEFT>QSORT </TH>
+	<TD>520K</TD>
+	<TD>380K</TD>
+	<TD>305K</TD>
+
+</TR>
+</TABLE>
+
+<p>
+<b>Fig.3.</b> Impact of term compression on heap consumption.
+</CENTER>
+
+<P>
+<B><a name="fig4"></B>
+<CENTER> 
+<TABLE BORDER=2 CELLPADDING=1>
+<TR ALIGN=CENTER><TH><i>Compiler version</i></TH>
+	    <TH> No  </TH>
+	    <TH> T   </TH>
+      <TH> I2,T</TH>
+	    <TH> I3  </TH>
+      <TH> I3,T</TH>
+</TR><P>
+<TR ALIGN=RIGHT><TH ALIGN=LEFT><i>Code size in bytes</i></TH>
+	<TD>47460</TD>
+	<TD>47484</TD>
+	<TD>49356</TD>
+	<TD>51124</TD>
+  <TD>51244</TD>
+
+</TR>
+</TABLE>
+<P>
+<b>Fig.4.</b> Impact of optimizations on the emulator's code size.
+</CENTER>                                                                                        
+<P>
+<DD>However, this is also true overall in the case of an
+OR-intensive permutation program like FINDALL-P(8),
+due to BinProlog's `heap-lifting' (see <A HREF="#f10">[Tarau92:ECO]</A>)
+based implementation of <b>findall/3</b>
+which uses compressing term copying and manages to put on the heap 
+directly the computed answer with no trace of the computation that 
+generates it. In this case, BinProlog creates at the end
+a better heap-representation than SICStus 2.1 without
+garbage collection although SICStus 2.1 uses dedicated
+list tags and therefore list-cells of size 2.
+BinProlog achieves for FINDALL-P(8) an overall
+heap-consumption of 3387K which is reasonably
+close to what SICStus (with list-cells of size 2)
+gets after garbage collection for FINDALL-P(8)
+i.e. 2904K. The CNREV program (NREV with
+another constructor is used instead of <b>'.'/2</b>) helps
+to compare dedicated list-instructions to our general
+purpose term-compression scheme.
+
+<P>
+<HR SIZE=4>
+
+<P>
+<B><a name="EMULA">
+<P><B>E<FONT SIZE=-1>MULATOR</FONT>
+C<FONT SIZE=-1>ODE</FONT>
+S<FONT SIZE=-1>IZE.</FONT></B><P></B>
+
+<A HREF="#fig4">Figure 4</A> shows the impact of our combined term
+and instruction compression optimizations
+on the emulator's code size.
+The increase in size  is still less than 4K
+when comparing the original version (No) to
+the most optimized one (I3,T).
+Version I3,T uses
+term compression compresses up to three instructions
+<A HREF="#f12">[Tarau92:WAMOpt]</A>.
+
+<P>
+<HR SIZE=4>
+
+<CENTER>
+<B><a name="C-TRANS">
+<H3><FONT SIZE=+2>T</FONT>ERM
+<FONT SIZE=+2>C</FONT>OMPRESSION
+<FONT SIZE=+2>and</FONT>
+<FONT SIZE=+2>C</FONT>-<FONT SIZE=+2>T</FONT>RANSLATION
+</H3></B></CENTER>
+
+The availability of term compression by last argument overlapping
+has been successfully used for a new C-translation technique,
+called <i>partial C-ification</i> <A HREF="#f14">[tdb95]</A>.
+<DD>
+Combined with top-down term creation for
+PUT instructions this technique is
+fully implemented in BinProlog 3.30 and
+gives performances in the range between
+emulated and native systems, while
+keeping the code very compact.
+The process of partial C-ification translates
+to C leaf routines sequences of
+relatively uniform instructions, occurring
+inside a clause. The generated code consists of compact sequence
+of BinWAM-mapped of C macros together with a representation
+of the emulator's byte-code as a C data structure.
+We describe only a short actual example here, and
+refer to <A HREF="#f14">[tdb95]</A>
+ for the details of this C-translation technique.
+
+<pre>
+% file ex.pl
+connected(9,X,Old,[X|Old]):-
+  member(X,[2,5,7]),
+  consistent(X,Old).
+
+</pre>
+Two C files are generated, one for the leaf-routine
+and one for the C-representation of emulated code
+as an array of structures.
+
+<pre>
+/* file ex.h */
+c_chunk_variable(xx_1) /* jumps to entry for function xx_1 */
+  move_reg(1,2)
+  get_structure(0,0,4)
+  unify_value(0,1)
+  unify_value(0,3)
+  put_structure(0,0,2)
+  write_integer(1,2)
+  write_constant(2,0)
+  write_integer(3,5)
+  write_constant(4,0)
+  write_integer(5,7)
+  write_constant(6,1)
+  put_structure(7,2,7)
+  write_value(8,1)
+  write_value(9,3)
+  write_value(10,5)
+  move_reg(3,7)
+c_chunk_value(11,4) /* jumps back to emulator */
+
+/* file ex.c */
+#include "../src/global.h"
+#include "../src/c_defs.h"
+#include "ex.h"
+
+struct bp_instr {
+  unsigned char op,reg;
+  unsigned short arity; char *name;
+} 
+
+user_bp[] = {
+{169,0,5,"connected"},
+{170,8,0,"9"},
+{7,1,0,"9"},
+{63,6,0,(void *)xx_1}, /* first `leaf' for connected/5 [1/0] */ 
+{6,0,2,"."},
+/* file ex.c */
+#include "../src/global.h"
+#include "../src/c_defs.h"
+#include "ex.h"
+
+struct bp_instr {
+  unsigned char op,reg;
+  unsigned short arity; char *name;
+} 
+
+user_bp[] = {
+{169,0,5,"connected"},
+{170,8,0,"9"},
+{7,1,0,"9"},
+{63,6,0,(void *)xx_1}, /* first `leaf' for connected/5 [1/0] */ 
+{6,0,2,"."},
+{6,0,0,"[]"},
+{6,0,3,"consistent"},
+{64,0,4,"?"},
+{17,0,3,"member"}
+};
+</pre>
+
+<DD>The majority of <b>WRITE_VARIABLE + PUT_STRUCTURE</b>
+instructions in last argument positions
+have been over have been collapsed to simpler <b>WRITE_CONSTANT</b>
+instructions.
+<DD>
+Note that offsets for heap operations
+are all precomputed, taking into account
+their positions in the presence of term compression,
+at compile time, and that functors are represented as 
+small integers referencing one word cells (using
+tag-on-data representation) inside emulated code.
+This approach keeps the code fairly simple while
+leaving and symbol table management and complex instructions
+(like choice-point handling and indexing) to the emulator.
+
+<P>
+<HR SIZE=4>
+
+<CENTER>
+<B><a name="SOURCE">
+<H3><FONT SIZE=+2>S</FONT>OURCE-<FONT SIZE=+2>L</FONT>EVEL<BR>
+<FONT SIZE=+2>O</FONT>PTIMIZATIONS
+<FONT SIZE=+2>and</FONT>
+<FONT SIZE=+2>T</FONT>ERM-<FONT SIZE=+2>C</FONT>OMPRESSION
+</H3></B></CENTER>
+
+In some situations last argument overlapping is becoming possible
+after an appropriate argument reordering, as in the following example:
+
+<pre>
+% Original program:
+
+  a(X):-b,c(s(X),X).
+  b.
+  c(_,0).
+  c(2,1).
+
+% Version with argument reordering for c/2:
+
+  a(X):-b,c(X,s(X)).
+  b.
+  c(0,_).
+  c(1,2).
+</pre>
+
+<DD>Clearly, the heap consumption of the second program,
+is smaller after binarization, in the presence of term compression,
+as the last argument of c/2 will ovelap with the functor s/1.
+<DD>
+Locally this is a simple operation but as reorderings have to be
+propagated to all calling points of a given predicate, the global
+impact nees some metric evaluation, in the sense that
+some globally optimal reordering with respect to a give
+initial goal have to be computed through static analysis.
+Although this is beyond the scope of the paper
+and needs further research, we will show here a sequence of
+transformation steps on an example just to show how powerful
+the technique can be, in the presence of partial evaluation
+with respect to known continuations.
+
+<DD>The following program computes a list of
+all permutations of a list, without using findall.
+
+<pre>
+% [BMARK_allperms,determ] = [time = 900,heap = 4626880]
+
+all_permutations([],[[]]).
+all_permutations([X|Xs],Ps2):-
+  all_permutations(Xs,Ps1),
+  extend_permutations(Ps1,X,Ps2).
+
+extend_permutations([],_,[]).
+extend_permutations([P|Ps1],X,[[X|P]|Ps3]):-
+  extend_permutations(Ps1,X,Ps2),
+  insert_item(P,X,[],Ps2,Ps3).
+
+insert_item([],_,_,Ps,Ps).
+insert_item([Y|Ys],X,Acc,Ps1,[Zs|Ps2]):-
+  reverse_and_append(Acc,[Y,X|Ys],Zs),
+  insert_item(Ys,X,[Y|Acc],Ps1,Ps2).
+
+reverse_and_append([],Acc,Acc).
+reverse_and_append([X|Xs],Acc,Zs):-
+  reverse_and_append(Xs,[X|Acc],Zs).
+
+
+% [BMARK_allperms,determ] = [time = 880,heap = 3497948]
+
+all_permutations([],[[]]).
+all_permutations([X|Xs],Ps2):-
+  all_permutations(Xs,Ps1),
+  extend_permutations(Ps1,X,Ps2).
+
+extend_permutations([],_,[]).
+extend_permutations([P|Ps1],X,[[X|P]|Ps3]):-
+  extend_permutations(Ps1,X,Ps2),
+  insert_item(P,X,Ps2,Ps3,[]).
+
+insert_item([],_,Ps,Ps,_).
+insert_item([Y|Ys],X,Ps1,[Zs|Ps2],Acc):-
+  reverse_and_append(Acc,Zs,[Y,X|Ys],Ys,X,Ps1,Ps2,[Y|Acc]).
+
+reverse_and_append([],Zs,Zs,Ys,X,Ps1,Ps2,YAcc):-
+  insert_item(Ys,X,Ps1,Ps2,YAcc).
+reverse_and_append([X1|Xs],Zs,Zs1,Ys,X,Ps1,Ps2,YAcc):-
+  reverse_and_append(Xs,Zs,[X1|Zs1],Ys,X,Ps1,Ps2,YAcc).
+
+
+% [BMARK_allperms,determ] = [time = 880,heap = 3497948]
+
+all_permutations([],[[]]).
+all_permutations([X|Xs],Ps2):-
+  all_permutations(Xs,Ps1),
+  extend_permutations(Ps1,X,Ps2).
+
+extend_permutations([],_,[]).
+extend_permutations([P|Ps1],X,[[X|P]|Ps3]):-
+  extend_permutations(Ps1,X,Ps2),
+  insert_item(P,X,Ps2,Ps3,[]).
+
+insert_item([],_,Ps,Ps,_).
+insert_item([Y|Ys],X,Ps1,[Zs|Ps2],Acc):-
+  reverse_and_append(Acc,Zs,[Y,X|Ys],Ys,X,Ps1,Ps2,[Y|Acc]).
+
+reverse_and_append([],Zs,Zs,Ys,X,Ps1,Ps2,YAcc):-
+  insert_item(Ys,X,Ps1,Ps2,YAcc).
+reverse_and_append([X1|Xs],Zs,Zs1,Ys,X,Ps1,Ps2,YAcc):-
+  reverse_and_append(Xs,Zs,[X1|Zs1],Ys,X,Ps1,Ps2,YAcc).
+
+
+% [BMARK_allperms,determ] = [time = 790,heap = 3497948]
+
+all_permutations([],[[]]).
+all_permutations([X|Xs],Ps2):-
+  all_permutations(Xs,Ps1),
+  extend_permutations(Ps1,X,Ps2).
+
+extend_permutations([],_,[]).
+extend_permutations([P|Ps1],X,[[X|P]|Ps3]):-
+  extend_permutations(Ps1,X,Ps2),
+  insert_item(P,[],X,Ps2,Ps3).
+
+insert_item([],_,_,Ps,Ps).
+insert_item([Y|Ys],Ys0,X,Ps1,[Zs|Ps2]):-
+  reverse_and_append(Ys0,Ys,X,Ps1,Ps2,[Y|Ys0],Zs,[Y,X|Ys]).
+
+reverse_and_append([],Ys,X,Ps1,Ps2,Ys1,Zs,Zs):-
+  insert_item(Ys,Ys1,X,Ps1,Ps2).
+reverse_and_append([X1|Xs],Ys,X,Ps1,Ps2,Ys1,Zs,Zs1):-
+  reverse_and_append(Xs,Ys,X,Ps1,Ps2,Ys1,Zs,[X1|Zs1]).
+
+</pre>
+
+<P>
+<HR SIZE=4>
+
+<CENTER>
+<B><a name="FUTURE>
+<H3><FONT SIZE=+2>F</FONT>UTURE
+<FONT SIZE=+2>W</FONT>ORK</H3></B>
+</CENTER> 
+
+Future work can be divided into the following two parts:
+source-to-source transformations and improvements on the BinWAM level.
+
+<P>
+<HR SIZE=4>
+
+<P>
+<B><a name="TRANSFO">
+<P><B>S<FONT SIZE=-1>OURCE</FONT>-to-S<FONT SIZE=-1>OURCE</FONT>
+T<FONT SIZE=-1>RANSFORMATIONS.</FONT></B><P></B>
+
+Binary Prolog encodes the state of the AND-control in
+terms, visible at the source level.
+Optimizations usually performed on a lower level can now be expressed
+at the source level.
+Source-to-source transformations that reduce the heap-consumption
+<A HREF="#f4">[Demoen90:KUL]</A>,<A HREF="#f8">[LOPSTR93:Neumerkel]</A>
+will be integrated into the BinProlog systems.
+In particular, an advanced technique, EBC-transformations,
+was developed that is able to perform
+interprocedural register allocation by mere source-to-source
+transformations in programs with difference lists or accumulators
+<A HREF="#f8">[LOPSTR93:Neumerkel]</A>.
+EBC-transformations transform a given binary Prolog program
+into another binary Prolog program.
+These optimizations cannot be observed directly on a traditional WAM,
+except in the case when the WAM is used to execute the derived binary
+programs. In this case, only WAM instructions that are present in the
+BinWAM are used. Comparable optimizations using the environment
+stack would require low level modifications to the WAM.
+
+<P>
+<HR SIZE=4>
+
+<P>
+<B><a name="OPTI">
+<P><B>B<FONT SIZE=-1>IN</FONT>WAM-O<FONT SIZE=-1>PTIMIZATIONS.</FONT></B><P></B>
+
+BinProlog does no global compilation at this time.
+Further performace increases need static analysis
+and a more fine-grained abstract machine.
+Techniques as developed
+for  Aquarius <A HREF="#f15">[VanRoyPhD]</A> are based on a machine (BAM) that
+is below the level of the WAM. More refined optimizations
+are possible on the BAM-level. Similar techniques
+could be adopted for the BinWAM.
+
+<P>
+<HR SIZE=4>
+
+<CENTER>
+<B><a name="CONCLU>
+<H3><FONT SIZE=+2>C</FONT>ONCLUSION</H3></B>
+</CENTER>
+
+The simplicity of BinProlog's basic instruction set and
+data-representation allows to apply low level optimizations 
+easier than on standard WAM. However, 
+our tag-on-data representation and its term-compression
+technique described in this paper
+can also improve environment-based WAM implementations.
+<DD>
+Combined with the previously reported <A HREF="#f11">[Tarau91:RU]</A> virtualization
+of demo-predicates at WAM-level that largely eliminate the overhead
+of metaprogramming introduced by binarization and the simplified
+memory management approach described in <A HREF="#f10">[Tarau92:ECO]</A>,
+BinProlog's engine BinWAM can now be considered
+a realistic alternative to standard WAM.
+
+<P>
+<HR SIZE=4>
+
+<P>
+<B><a name="ACKNOW">
+<P><B>A<FONT SIZE=-1>CKNOWLEDGMENTS.</FONT></B><P></B>
+
+We are grateful for support from
+NSERC (research grant OGP0107411 and equipment grant), the
+FESR of the Universit'e de Moncton and the
+Jubilaumsfond der Stadt Wien.
+Suggestions and comments from a large number of BinProlog users helped
+improving
+the  design of our logic engine and clarifying the content of this
+paper. Special thanks go to Bart Demoen and Mats Carlsson who shared
+with the first author their deep knowledge of WAM-internals at a
+point when his limited implementation experience would otherwise have
+a negative impact on the BinWAM's initial design.
+Professor Brockhaus has supported our work and provided
+helpful comments.
+
+<P>
+<HR SIZE=4>
+
+<B><a name="REF">
+<H4><FONT SIZE=+1>R</FONT>EFERENCES</H4></B>
+
+
+<P>
+<DL>
+<DT>
+<B><a name="f1">[Appel92]</B> A. Appel.
+<DD><I>Compiling with Continuations</I>. Cambridge University Press, 1992.
+
+<P>
+<DT>
+<B><a name="f2">[Carlsson90]</B> M. Carlsson.
+<DD><I>Design and Implementation of an OR-Parallel Prolog Engine</I>.
+Phd thesis, SICS, 1990.
+
+<P>
+<DT>
+<B><a name="f3">[Cheney70]</B> C. J. Cheney.
+<DD>A nonrecursive list compacting algorithm.
+<DD><I>Communications of ACM</I>, 11(13):677--678, Nov. 1970.
+
+<P>
+<DT>
+<B><a name="f4">[Demoen90:KUL]</B> B.Demoen. 
+<DD>
+On the Transformation of a Prolog program to a more efficient 
+Binary program. Technical Report 130, K.U.Leuven, Dec. 1990.
+
+<P>
+<DT>
+<B><a name="f5">[Demoen91:RU]</B> B.Demoen and A.Marien.
+<DD>Implementation of Prolog as binary definite Programs.
+In A.Voronkov, editor, <i>Logic Programming, RCLP Proceedings</i>, number 592 in Lecture Notes in Artificial Intelligence, pages 165--176,
+Berlin, Heidelberg, 1992. Springer-Verlag.
+<P>
+
+<P>
+<DT>
+<B><a name="f6">[DobryPhD]</B> T. Dobry.
+<DD><I>A High Performance Architecture for Prolog</I>.
+Phd thesis, University of California at Berkley, 1987.
+
+<P>
+<DT>
+<B>
+<a name="f7">[Marien88:KUL]</B> A. Marien.
+<DD>An Optimal Intermediate Code for Structure Creation in a
+WAM-based Prolog Implementation. Technical report, K.U.Leuven, May 1988.
+
+<P>
+<DT>
+<B><a name="f8">[LOPSTR93:Neumerkel]</B>
+U. Neumerkel. A transformation based on the equality between terms.
+<DD>  In <i>Logic Program Synthesis and Transformation, LOPSTR 1993</i>.
+  Springer-Verlag, 1993.
+
+<P>
+<DT>
+<B>
+<a name="f9">[Tarau91:JAP]</B> P.Tarau. 
+<DD>A Simplified Abstract Machine for the execution of Binary
+  Metaprograms.
+ In <i>Proceedings of the Logic Programming Conference'91</i>, pages
+  119--128. ICOT, Tokyo, 7 1991.
+
+<P>
+<DT>
+<B>
+<a name="f10">[Tarau92:ECO]</B> P.Tarau.
+<DD>Ecological Memory Managment in a Continuation Passing
+  Prolog Engine. In Y.Bekkers and J.Cohen, editors, <i>Memory Management
+  International Workshop IWMM 92 Proceedings</i>, 
+  number 637 in Lecture Notes in
+  Computer Science, pages 344--356. Springer, Sept. 1992.
+
+<P>
+<DT>
+<B>
+<a name="f11">[Tarau91:RU]</B> P.Tarau.
+<DD>Program Transformations and WAM-support for the Compilation
+  of Definite Metaprograms.
+  In A.Voronkov, editor, <i>Logic Programming, RCLP Proceedings</i>,
+  number 592 in Lecture Notes in Artificial Intelligence, pages 462--473,
+  Berlin, Heidelberg, 1992. Springer-Verlag.
+
+<P>
+<DT>
+<B>
+<a name="f12">[Tarau92:WAMOpt]</B> P.Tarau. 
+<DD>Wam-optimizations in BinProlog: towards a realistic continuation
+  passing prolog engine. Technical Report 92-3, Dept. d'Informatique,   Universit'e de Moncton, July 1992. available by ftp from clement.info.umoncton.ca.
+<p>
+
+<P>
+<DT>
+<B>
+<a name="f13">[Tarau90:PLILP]</B> P.Tarau and M.Boyer.
+<DD>Elementary Logic Programs. In P.Deransart and J.Ma{\l}uszy'nski,
+ editors, <i>Proceedings of Programming Language Implementation and Logic Programming</i>,
+ number 456 in  Lecture Notes in Computer Science, pages 159--173. Springer, Aug. 1990.
+
+<P>
+<DT>
+<B>
+<a name="f14">[tdb95]</B> P.Tarau, B.Demoen, and K.DeBosschere.
+<DD>The power of partial translation: an experiment with the c-ification
+  of binary prolog. In <i>Proceedings of the 1995 ACM Symposium on Applied Computing</i>, Nashville/TN, Feb. 1995. ACM Press.
+<P>
+
+<P>
+<DT>
+<B>
+<a name="f15">[VanRoyPhD]</B> P. Van Roy.
+<DD><I> Can Logic programming Execute as Fast as Imperative
+  Programming</I>. Phd thesis, University of California at Berkley, 1990.
+
+<P>
+<DT>
+<B>
+<a name="f16">[WAND80]</B> M. Wand.
+<DD> Continuation-based program transformation strategies.
+<DD><I> Journal of the Association for Computing Machinery</I>,
+27(1):164--180, 1980.
+
+<P>
+<DT>
+<B>
+<a name="f17">[WA83]</B> D.H.D. Warren.
+<DD>An Abstract Prolog Instruction Set.
+Technical Note 309, SRI International, Oct. 1983.
+</DL>
+
+<P>
+<HR SIZE=4>
+
+<P>
+<DD>
+<h5><B><a name="footnote1">(1)</B> system Available by anonymous </i>from clement.info.umoncton.ca </i><A HREF="http://www.sciences.umoncton.ca/ftp_serv/info/paul/paul.htm">HERE</A></h5>
+
+<P>
+<DD>
+<h5><B><a name="footnote2">(2)</B> 
+This comparison applies only to the basic WAM as defined in 
+<A HREF="#f17">[WA83]</A> and to the BinWAM as a strict subset of the WAM. Some WAM implementationsfold e.g. get_variable-instructions and  calls. Also BinProlog folds instructions.</h5>
+
+
