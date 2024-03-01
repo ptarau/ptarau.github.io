@@ -1,5 +1,0 @@
-rm -f paper.pdf
-latex paper.tex
-latex paper.tex
-pdflatex paper.tex
-open paper.pdf
